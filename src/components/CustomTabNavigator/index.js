@@ -3,35 +3,52 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AntDesign, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
 
 import DrawerRoutes from '../../routes/drawer.routes'; // Importa o Drawer Navigator
-import Adicionar from '../../screens/Adicionar';
+// import Adicionar from '../../screens/Adicionar'; // Removida a importação direta da tela Adicionar
 import Favoritos from '../../screens/Favoritos';
 
 const Tab = createBottomTabNavigator();
 
 // Componente personalizado para o botão central 'Adicionar'
-const CustomPlusButton = ({ children, onPress }) => (
-  <TouchableOpacity
-    style={{
-      top: -15, // Ajustei a posição para centralizar melhor
-      justifyContent: 'center',
-      alignItems: 'center',
-    }}
-    onPress={onPress}
-  >
-    <View style={{
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-      backgroundColor: '#357bd2', // Cor azul para o botão
-      justifyContent: 'center',
-      alignItems: 'center',
-    }}>
+const CustomPlusButton = ({ children }) => { // Remove onPress dos props
+  const navigation = useNavigation(); // Obtém o objeto navigation
+
+  return (
+    <TouchableOpacity
+      style={{
+        top: -15, // Ajustei a posição para centralizar melhor
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+      onPress={() => navigation.navigate('HomeTab', { screen: 'AdicionarDrawer' })} // Usa o navigation do hook
+    >
+      <View style={{
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#357bd2', // Cor azul para o botão
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        {children}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const CustomHomeButton = ({ children }) => {
+  const navigation = useNavigation();
+  return (
+    <TouchableOpacity
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', top: 10 }}
+      onPress={() => navigation.navigate('HomeTab', { screen: 'Dashboard' })}
+    >
       {children}
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 export default function CustomTabNavigator() {
   return (
@@ -60,18 +77,24 @@ export default function CustomTabNavigator() {
               <Ionicons name="home-outline" size={25} color={focused ? '#357bd2' : '#748c94'} />
             </View>
           ),
+          tabBarButton: (props) => (
+            <CustomHomeButton {...props} />
+          )
         }}
       />
       <Tab.Screen
-        name="Adicionar"
-        component={Adicionar}
+        name="Adicionar" // Mantém o nome da aba, mas a navegação é controlada pelo onPress
+        component={View} // Componente vazio, pois a navegação é tratada pelo tabBarButton
         options={{
-          headerShown: false, // Oculta o cabeçalho para esta tela de placeholder
+          headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <FontAwesome5 name="plus-square" size={28} color="#fff" /> // Diminuí o tamanho do ícone
+            <FontAwesome5 name="plus-square" size={28} color="#fff" />
           ),
           tabBarButton: (props) => (
-            <CustomPlusButton {...props} />
+            <CustomPlusButton 
+              {...props}
+              onPress={() => props.navigation.navigate('HomeTab', { screen: 'AdicionarDrawer' })} // Navega para a tela Adicionar dentro do Drawer
+            />
           )
         }}
       />
