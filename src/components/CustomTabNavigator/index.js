@@ -42,7 +42,7 @@ const CustomHomeButton = ({ children }) => {
   const navigation = useNavigation();
   return (
     <TouchableOpacity
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', top: 10 }}
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
       onPress={() => navigation.navigate('HomeTab', { screen: 'Dashboard' })}
     >
       {children}
