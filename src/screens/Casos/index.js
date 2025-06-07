@@ -109,7 +109,7 @@ export default function Casos() {
         <View style={styles.tableHeader}>
           <Text style={[styles.headerCell, styles.titleCell]}>Título</Text>
           <Text style={styles.headerCell}>Status</Text>
-          <Text style={styles.headerCell}>Data de Abertura</Text>
+          <Text style={styles.headerCell}>Abertura</Text>
           <Text style={styles.headerCell}>Detalhes</Text>
         </View>
 
