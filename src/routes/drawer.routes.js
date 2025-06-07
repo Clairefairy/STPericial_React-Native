@@ -3,6 +3,7 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome6, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { View, Image, StyleSheet, TouchableOpacity } from "react-native";
 
 import Dashboard from "../screens/Dashboard";
 import Casos from "../screens/Casos";
@@ -12,6 +13,9 @@ import Vitimas from "../screens/Vitimas";
 import GerenciarUsuarios from "../screens/GerenciarUsuarios";
 import Perfil from "../screens/Perfil";
 
+import CustomHeader from "../components/CustomHeader";
+import CustomDrawerContent from "../components/CustomDrawerContent";
+
 const Drawer = createDrawerNavigator();
 
 export default function DrawerRoutes() {
@@ -19,17 +23,20 @@ export default function DrawerRoutes() {
 
   return (
     <Drawer.Navigator
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: "#357bd2",
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      screenOptions={({ navigation }) => ({
+        header: ({ route }) => {
+          if (route.name === "Sair") {
+            return null; 
+          }
+          return <CustomHeader />;
         },
-        headerTintColor: "#fff",
         drawerStyle: {
           backgroundColor: "#fff",
         },
         drawerActiveTintColor: "#357bd2",
         drawerInactiveTintColor: "#000",
-      }}
+      })}
     >
       <Drawer.Screen
         name="Dashboard"
@@ -54,7 +61,7 @@ export default function DrawerRoutes() {
         component={Laudos}
         options={{
           drawerIcon: ({ color }) => (
-            <Icon name="medical-services" size={22} color={color} />
+            <Icon name="description" size={22} color={color} />
           ),
         }}
       />
