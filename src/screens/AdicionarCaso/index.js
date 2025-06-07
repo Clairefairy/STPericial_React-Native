@@ -12,6 +12,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import ModalVitima from "../../components/ModalVitima";
 
 export default function AdicionarCaso() {
   const [tipo, setTipo] = useState('');
@@ -20,6 +21,12 @@ export default function AdicionarCaso() {
   const [dataFechamento, setDataFechamento] = useState(null);
   const [showAberturaPicker, setShowAberturaPicker] = useState(false);
   const [showFechamentoPicker, setShowFechamentoPicker] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [nomeVitima, setNomeVitima] = useState('');
+  const [sexoVitima, setSexoVitima] = useState('');
+  const [identificadoVitima, setIdentificadoVitima] = useState('');
+  const [identificacaoVitima, setIdentificacaoVitima] = useState('');
+  const [observacoesVitima, setObservacoesVitima] = useState('');
 
   const tipos = [
     "Homicídio",
@@ -57,6 +64,12 @@ export default function AdicionarCaso() {
   const formatDate = (date) => {
     if (!date) return "DD/MM/AAAA (opcional)";
     return date.toLocaleDateString('pt-BR');
+  };
+
+  const handleSaveVitima = (vitimaData) => {
+    // Aqui você pode implementar a lógica para salvar a vítima
+    console.log('Dados da vítima:', vitimaData);
+    setModalVisible(false);
   };
 
   return (
@@ -164,7 +177,10 @@ export default function AdicionarCaso() {
             <Text style={styles.dropdownPlaceholder}>Selecione a vítima...</Text>
           </View>
           <Text style={styles.orText}>ou</Text>
-          <TouchableOpacity style={styles.createVictimButton}>
+          <TouchableOpacity 
+            style={styles.createVictimButton}
+            onPress={() => setModalVisible(true)}
+          >
             <Text style={styles.createVictimButtonText}>Criar vítima</Text>
           </TouchableOpacity>
         </View>
@@ -177,6 +193,12 @@ export default function AdicionarCaso() {
             <Text style={styles.buttonText}>Cancelar</Text>
           </TouchableOpacity>
         </View>
+
+        <ModalVitima 
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onSave={handleSaveVitima}
+        />
       </View>
     </ScrollView>
   );
@@ -300,5 +322,48 @@ const styles = StyleSheet.create({
   clearButton: {
     marginLeft: 10,
     padding: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+  },
+  modalScroll: {
+    maxHeight: '100%',
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  modalButton: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    minWidth: 120,
   },
 }); 
