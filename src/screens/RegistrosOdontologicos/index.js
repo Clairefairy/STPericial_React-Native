@@ -8,9 +8,12 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ModalRegistroOdontologico from "../../components/ModalRegistroOdontologico";
+import ModalDetalhesRegistroOdontologico from "../../components/ModalDetalhesRegistroOdontologico";
 
 export default function RegistrosOdontologicos() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalDetalhesVisible, setModalDetalhesVisible] = useState(false);
+  const [registroSelecionado, setRegistroSelecionado] = useState(null);
 
   // Dados de exemplo para a tabela
   const registros = [
@@ -18,22 +21,36 @@ export default function RegistrosOdontologicos() {
       id: 1,
       vitima: "João Silva",
       notas: "Exame odontológico realizado em 15/03/2024. Identificação de características dentárias específicas.",
+      dentesAusentes: ["11", "12", "21"],
+      marcasOdontologicas: "Restauração em resina composta",
+      observacoes: "Paciente apresenta boa higiene bucal. Necessário acompanhamento periódico.",
     },
     {
       id: 2,
       vitima: "Maria Santos",
       notas: "Registro de arcada dentária superior e inferior. Documentação fotográfica realizada.",
+      dentesAusentes: ["16", "26"],
+      marcasOdontologicas: "Prótese parcial removível",
+      observacoes: "Documentação fotográfica completa realizada. Arcada superior com ausência de molares.",
     },
     {
       id: 3,
       vitima: "Pedro Oliveira",
       notas: "Análise de restaurações e próteses dentárias. Mapeamento completo da arcada.",
+      dentesAusentes: ["31", "32", "41", "42"],
+      marcasOdontologicas: "Prótese total superior",
+      observacoes: "Paciente edêntulo total na arcada superior. Prótese total em bom estado de conservação.",
     },
   ];
 
   const handleSaveRegistro = (registro) => {
     console.log("Novo registro:", registro);
     // Aqui você implementará a lógica para salvar o registro
+  };
+
+  const handleOpenDetalhes = (registro) => {
+    setRegistroSelecionado(registro);
+    setModalDetalhesVisible(true);
   };
 
   return (
@@ -62,7 +79,10 @@ export default function RegistrosOdontologicos() {
             <Text style={[styles.cell, styles.vitimaCell]}>{registro.vitima}</Text>
             <Text style={[styles.cell, styles.notasCell]}>{registro.notas}</Text>
             <View style={styles.actionsCell}>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleOpenDetalhes(registro)}
+              >
                 <Icon name="assignment" size={24} color="#357bd2" />
               </TouchableOpacity>
             </View>
@@ -74,6 +94,12 @@ export default function RegistrosOdontologicos() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSaveRegistro}
+      />
+
+      <ModalDetalhesRegistroOdontologico
+        visible={modalDetalhesVisible}
+        onClose={() => setModalDetalhesVisible(false)}
+        registro={registroSelecionado}
       />
     </ScrollView>
   );
