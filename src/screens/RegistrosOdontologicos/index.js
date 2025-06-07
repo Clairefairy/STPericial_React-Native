@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,11 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import ModalRegistroOdontologico from "../../components/ModalRegistroOdontologico";
 
 export default function RegistrosOdontologicos() {
+  const [modalVisible, setModalVisible] = useState(false);
+
   // Dados de exemplo para a tabela
   const registros = [
     {
@@ -28,11 +31,19 @@ export default function RegistrosOdontologicos() {
     },
   ];
 
+  const handleSaveRegistro = (registro) => {
+    console.log("Novo registro:", registro);
+    // Aqui você implementará a lógica para salvar o registro
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Gerenciamento de Registros Odontológicos</Text>
 
-      <TouchableOpacity style={styles.createButton}>
+      <TouchableOpacity 
+        style={styles.createButton}
+        onPress={() => setModalVisible(true)}
+      >
         <Text style={styles.createButtonText}>Criar Registro</Text>
       </TouchableOpacity>
 
@@ -58,6 +69,12 @@ export default function RegistrosOdontologicos() {
           </View>
         ))}
       </View>
+
+      <ModalRegistroOdontologico
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSaveRegistro}
+      />
     </ScrollView>
   );
 }
