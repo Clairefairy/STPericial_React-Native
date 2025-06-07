@@ -68,7 +68,10 @@ export default function Login() {
           />
         </View>
 
-        <TouchableOpacity style={styles.buttonLogin}>
+        <TouchableOpacity 
+          style={styles.buttonLogin}
+          onPress={() => navigation.navigate("Dashboard")}
+        >
           <Text style={styles.textButtonLogin}>Login</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buttonCadastro}>

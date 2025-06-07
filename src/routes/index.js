@@ -5,6 +5,7 @@ import Home from "../screens/BemVindo";
 import Login from "../screens/Login";
 import Bemvindo from "../screens/BemVindo";
 import Cadastro from "../screens/Cadastro";
+import Dashboard from "../screens/Dashboard";
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +30,13 @@ export default function Routes() {
       <Stack.Screen
         name="Cadastro"
         component={Cadastro}
+        options={{
+          headerShown: false, // ESSE COMANDO IRÁ ESCONDER O CABEÇALHO PADRÃO
+        }}
+      />
+      <Stack.Screen
+        name="Dashboard"
+        component={Dashboard}
         options={{
           headerShown: false, // ESSE COMANDO IRÁ ESCONDER O CABEÇALHO PADRÃO
         }}
