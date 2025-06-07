@@ -1,11 +1,11 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import DrawerRoutes from "./drawer.routes";
 
 // IMPORTANTO AS SCREENS
 import Home from "../screens/BemVindo";
 import Login from "../screens/Login";
 import Bemvindo from "../screens/BemVindo";
 import Cadastro from "../screens/Cadastro";
-import Dashboard from "../screens/Dashboard";
 
 const Stack = createNativeStackNavigator();
 
@@ -35,10 +35,10 @@ export default function Routes() {
         }}
       />
       <Stack.Screen
-        name="Dashboard"
-        component={Dashboard}
+        name="MainApp"
+        component={DrawerRoutes}
         options={{
-          headerShown: false, // ESSE COMANDO IRÁ ESCONDER O CABEÇALHO PADRÃO
+          headerShown: false,
         }}
       />
     </Stack.Navigator>
