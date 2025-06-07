@@ -1,7 +1,7 @@
 import React from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 import Dashboard from "../screens/Dashboard";
@@ -64,7 +64,7 @@ export default function DrawerRoutes() {
         options={{
           title: "Registros Odontológicos",
           drawerIcon: ({ color }) => (
-            <Icon name="medical-services" size={22} color={color} />
+            <FontAwesome5 name="tooth" size={22} color={color} />
           ),
         }}
       />
@@ -106,8 +106,12 @@ export default function DrawerRoutes() {
           ),
         }}
         listeners={{
-          drawerItemPress: () => {
-            navigation.navigate("Login");
+          drawerItemPress: (e) => {
+            e.preventDefault();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
           },
         }}
       />
