@@ -13,6 +13,7 @@ import { Picker } from '@react-native-picker/picker';
 export default function ModalVitima({ visible, onClose, onSave }) {
   const [nomeVitima, setNomeVitima] = useState('');
   const [sexoVitima, setSexoVitima] = useState('');
+  const [etniaVitima, setEtniaVitima] = useState('');
   const [identificadoVitima, setIdentificadoVitima] = useState('');
   const [identificacaoVitima, setIdentificacaoVitima] = useState('');
   const [observacoesVitima, setObservacoesVitima] = useState('');
@@ -21,6 +22,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
     const vitimaData = {
       nome: nomeVitima,
       sexo: sexoVitima,
+      etnia: etniaVitima,
       identificado: identificadoVitima,
       identificacao: identificacaoVitima,
       observacoes: observacoesVitima
@@ -31,6 +33,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
     // Limpar os campos após criar
     setNomeVitima('');
     setSexoVitima('');
+    setEtniaVitima('');
     setIdentificadoVitima('');
     setIdentificacaoVitima('');
     setObservacoesVitima('');
@@ -66,6 +69,23 @@ export default function ModalVitima({ visible, onClose, onSave }) {
                 <Picker.Item label="Selecione o sexo..." value="" />
                 <Picker.Item label="Masculino" value="Masculino" />
                 <Picker.Item label="Feminino" value="Feminino" />
+                <Picker.Item label="Outro" value="Outro" />
+              </Picker>
+            </View>
+
+            <Text style={styles.label}>Etnia</Text>
+            <View style={styles.inputContainer}>
+              <Picker
+                selectedValue={etniaVitima}
+                onValueChange={(itemValue) => setEtniaVitima(itemValue)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Selecione a etnia..." value="" />
+                <Picker.Item label="Branca" value="Branca" />
+                <Picker.Item label="Preta" value="Preta" />
+                <Picker.Item label="Parda" value="Parda" />
+                <Picker.Item label="Amarela" value="Amarela" />
+                <Picker.Item label="Indígena" value="Indígena" />
                 <Picker.Item label="Outro" value="Outro" />
               </Picker>
             </View>
