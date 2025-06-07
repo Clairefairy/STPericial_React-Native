@@ -6,29 +6,29 @@ import { AntDesign, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
 
 import DrawerRoutes from '../../routes/drawer.routes'; // Importa o Drawer Navigator
-// import Adicionar from '../../screens/Adicionar'; // Removida a importação direta da tela Adicionar
+import AdicionarCaso from '../../screens/AdicionarCaso'; // Importa a tela AdicionarCaso
 import Favoritos from '../../screens/Favoritos';
 
 const Tab = createBottomTabNavigator();
 
 // Componente personalizado para o botão central 'Adicionar'
-const CustomPlusButton = ({ children }) => { // Remove onPress dos props
-  const navigation = useNavigation(); // Obtém o objeto navigation
+const CustomPlusButton = ({ children }) => {
+  const navigation = useNavigation();
 
   return (
     <TouchableOpacity
       style={{
-        top: -15, // Ajustei a posição para centralizar melhor
+        top: -15,
         justifyContent: 'center',
         alignItems: 'center',
       }}
-      onPress={() => navigation.navigate('HomeTab', { screen: 'AdicionarDrawer' })} // Usa o navigation do hook
+      onPress={() => navigation.navigate('AdicionarCaso')}
     >
       <View style={{
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: '#357bd2', // Cor azul para o botão
+        backgroundColor: '#357bd2',
         justifyContent: 'center',
         alignItems: 'center',
       }}>
@@ -83,18 +83,15 @@ export default function CustomTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Adicionar" // Mantém o nome da aba, mas a navegação é controlada pelo onPress
-        component={View} // Componente vazio, pois a navegação é tratada pelo tabBarButton
+        name="AdicionarCaso"
+        component={AdicionarCaso}
         options={{
           headerShown: false,
           tabBarIcon: ({ focused }) => (
             <FontAwesome5 name="plus-square" size={28} color="#fff" />
           ),
           tabBarButton: (props) => (
-            <CustomPlusButton 
-              {...props}
-              onPress={() => props.navigation.navigate('HomeTab', { screen: 'AdicionarDrawer' })} // Navega para a tela Adicionar dentro do Drawer
-            />
+            <CustomPlusButton {...props} />
           )
         }}
       />

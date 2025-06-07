@@ -12,7 +12,6 @@ import RegistrosOdontologicos from "../screens/RegistrosOdontologicos";
 import Vitimas from "../screens/Vitimas";
 import GerenciarUsuarios from "../screens/GerenciarUsuarios";
 import Perfil from "../screens/Perfil";
-import Adicionar from "../screens/Adicionar";
 
 import CustomHeader from "../components/CustomHeader";
 import CustomDrawerContent from "../components/CustomDrawerContent";
@@ -102,16 +101,6 @@ export default function DrawerRoutes() {
         options={{
           drawerIcon: ({ color }) => (
             <Icon name="person" size={22} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="AdicionarDrawer"
-        component={Adicionar}
-        options={{
-          title: "Adicionar Novo",
-          drawerIcon: ({ color }) => (
-            <FontAwesome5 name="plus-square" size={22} color={color} />
           ),
         }}
       />
