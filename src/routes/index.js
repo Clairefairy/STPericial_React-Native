@@ -1,5 +1,5 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import DrawerRoutes from "./drawer.routes";
+import CustomTabNavigator from "../components/CustomTabNavigator";
 
 // IMPORTANTO AS SCREENS
 import Home from "../screens/BemVindo";
@@ -36,7 +36,7 @@ export default function Routes() {
       />
       <Stack.Screen
         name="MainApp"
-        component={DrawerRoutes}
+        component={CustomTabNavigator}
         options={{
           headerShown: false,
         }}
