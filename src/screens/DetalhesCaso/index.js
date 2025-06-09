@@ -347,9 +347,19 @@ export default function DetalhesCaso({ route, navigation }) {
 
       <Text style={styles.titulo}>{caso.title || "Sem título"}</Text>
 
-      <View style={[styles.statusContainer, { backgroundColor: getStatusColor(caso.status) }]}>
-        {getStatusIcon(caso.status)}
-        <Text style={styles.status}>{formatStatus(caso.status)}</Text>
+      <View style={styles.statusRow}>
+        <View style={[styles.statusContainer, { backgroundColor: getStatusColor(caso.status) }]}>
+          {getStatusIcon(caso.status)}
+          <Text style={styles.status}>{formatStatus(caso.status)}</Text>
+        </View>
+
+        <TouchableOpacity 
+          style={styles.generatePdfButton}
+          onPress={() => {}}
+        >
+          <Feather name="file-text" size={20} color="#fff" />
+          <Text style={styles.generatePdfButtonText}>Gerar PDF</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.infoSection}>
@@ -711,12 +721,17 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    marginBottom: 20,
     alignSelf: 'flex-start',
   },
   status: {
@@ -1041,5 +1056,19 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  generatePdfButton: {
+    backgroundColor: '#357bd2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  generatePdfButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 }); 

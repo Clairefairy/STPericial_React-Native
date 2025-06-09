@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,54 +6,114 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
+import api from "../../services/api";
 
 export default function Laudos() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLaudo, setSelectedLaudo] = useState(null);
+  const [laudos, setLaudos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // Dados de exemplo para a tabela
-  const laudos = [
-    {
-      id: 1,
-      titulo: "Laudo de Exame de DNA - Caso João Silva",
-      dataEmissao: "15/03/2024",
-      responsavel: "Dr. Carlos Silva",
-      evidenciaId: "EVD-001",
-    },
-    {
-      id: 2,
-      titulo: "Laudo de Exame Toxicológico - Caso Maria Santos",
-      dataEmissao: "10/03/2024",
-      responsavel: "Dra. Ana Santos",
-      evidenciaId: "EVD-002",
-    },
-    {
-      id: 3,
-      titulo: "Laudo de Exame de Balística - Caso Pedro Oliveira",
-      dataEmissao: "05/03/2024",
-      responsavel: "Dr. Roberto Oliveira",
-      evidenciaId: "EVD-003",
-    },
-  ];
+  useEffect(() => {
+    fetchLaudos();
+  }, []);
 
-  const handleDetalhes = (laudo) => {
-    setSelectedLaudo(laudo);
-    setModalVisible(true);
+  const fetchLaudos = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/reports');
+      const laudosData = response.data;
+
+      // Buscar detalhes dos responsáveis
+      const laudosComResponsaveis = await Promise.all(
+        laudosData.map(async (laudo) => {
+          if (laudo.expertResponsible) {
+            try {
+              const userResponse = await api.get(`/api/users/${laudo.expertResponsible}`);
+              return { ...laudo, expertResponsible: userResponse.data };
+            } catch (err) {
+              console.error('Erro ao buscar detalhes do responsável:', err);
+              return laudo;
+            }
+          }
+          return laudo;
+        })
+      );
+
+      setLaudos(laudosComResponsaveis);
+      setError(null);
+    } catch (err) {
+      console.error('Erro ao buscar laudos:', err);
+      setError('Erro ao carregar laudos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDetalhes = async (laudo) => {
+    try {
+      setLoadingDetails(true);
+      const response = await api.get(`/api/reports/${laudo._id}`);
+      const laudoData = response.data;
+
+      // Buscar detalhes do responsável
+      if (laudoData.expertResponsible) {
+        try {
+          const userResponse = await api.get(`/api/users/${laudoData.expertResponsible}`);
+          laudoData.expertResponsible = userResponse.data;
+        } catch (err) {
+          console.error('Erro ao buscar detalhes do responsável:', err);
+          laudoData.expertResponsible = null;
+        }
+      }
+
+      setSelectedLaudo(laudoData);
+      setModalVisible(true);
+    } catch (err) {
+      console.error('Erro ao buscar detalhes do laudo:', err);
+      setError('Erro ao carregar detalhes do laudo');
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleDownload = () => {
     // Implementar lógica de download
-    console.log('Download do laudo:', selectedLaudo.id);
+    console.log('Download do laudo:', selectedLaudo._id);
   };
 
-  const handleExcluir = () => {
-    // Implementar lógica de exclusão
-    console.log('Excluir laudo:', selectedLaudo.id);
-    setModalVisible(false);
+  const handleExcluir = async () => {
+    try {
+      await api.delete(`/api/reports/${selectedLaudo._id}`);
+      setModalVisible(false);
+      fetchLaudos(); // Atualiza a lista após excluir
+    } catch (err) {
+      console.error('Erro ao excluir laudo:', err);
+      setError('Erro ao excluir laudo');
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#357bd2" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -71,16 +131,25 @@ export default function Laudos() {
 
         {/* Linhas da tabela */}
         {laudos.map((laudo) => (
-          <View key={laudo.id} style={styles.tableRow}>
-            <Text style={[styles.cell, styles.titleCell]}>{laudo.titulo}</Text>
-            <Text style={styles.cell}>{laudo.dataEmissao}</Text>
-            <Text style={[styles.cell, styles.responsavelCell]}>{laudo.responsavel}</Text>
+          <View key={laudo._id} style={styles.tableRow}>
+            <Text style={[styles.cell, styles.titleCell]}>{laudo.title}</Text>
+            <Text style={styles.cell}>
+              {new Date(laudo.createdAt).toLocaleDateString('pt-BR')}
+            </Text>
+            <Text style={[styles.cell, styles.responsavelCell]}>
+              {laudo.expertResponsible?.name || 'Não atribuído'}
+            </Text>
             <View style={styles.actionsCell}>
               <TouchableOpacity 
                 style={styles.actionButton}
                 onPress={() => handleDetalhes(laudo)}
+                disabled={loadingDetails}
               >
-                <Icon name="assignment" size={24} color="#357bd2" />
+                {loadingDetails && selectedLaudo?._id === laudo._id ? (
+                  <ActivityIndicator size="small" color="#357bd2" />
+                ) : (
+                  <Icon name="assignment" size={24} color="#357bd2" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -98,22 +167,38 @@ export default function Laudos() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Detalhes do Laudo</Text>
             
-            <View style={styles.modalInfoContainer}>
-              <View style={styles.modalInfoRow}>
-                <Text style={styles.modalLabel}>Evidência:</Text>
-                <Text style={styles.modalValue}>{selectedLaudo?.evidenciaId}</Text>
+            <ScrollView style={styles.modalScrollView}>
+              <View style={styles.modalInfoContainer}>
+                <View style={styles.modalInfoRow}>
+                  <Text style={styles.modalLabel}>Título:</Text>
+                  <Text style={styles.modalValue}>{selectedLaudo?.title || 'Não informado'}</Text>
+                </View>
+                
+                <View style={styles.modalInfoRow}>
+                  <Text style={styles.modalLabel}>Evidência:</Text>
+                  <Text style={styles.modalValue}>{selectedLaudo?.evidence || 'Não informado'}</Text>
+                </View>
+                
+                <View style={styles.modalInfoRow}>
+                  <Text style={styles.modalLabel}>Data de Emissão:</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedLaudo?.dateEmission ? new Date(selectedLaudo.dateEmission).toLocaleDateString('pt-BR') : 'Não informado'}
+                  </Text>
+                </View>
+                
+                <View style={styles.modalInfoRow}>
+                  <Text style={styles.modalLabel}>Descrição:</Text>
+                  <Text style={styles.modalValue}>{selectedLaudo?.description || 'Não informado'}</Text>
+                </View>
+
+                <View style={styles.modalInfoRow}>
+                  <Text style={styles.modalLabel}>Responsável:</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedLaudo?.expertResponsible?.name || 'Não atribuído'}
+                  </Text>
+                </View>
               </View>
-              
-              <View style={styles.modalInfoRow}>
-                <Text style={styles.modalLabel}>Data de Emissão:</Text>
-                <Text style={styles.modalValue}>{selectedLaudo?.dataEmissao}</Text>
-              </View>
-              
-              <View style={styles.modalInfoRow}>
-                <Text style={styles.modalLabel}>Responsável:</Text>
-                <Text style={styles.modalValue}>{selectedLaudo?.responsavel}</Text>
-              </View>
-            </View>
+            </ScrollView>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity 
@@ -223,8 +308,11 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '90%',
     maxWidth: 400,
+    maxHeight: '80%',
     position: 'relative',
-    paddingBottom: 80,
+  },
+  modalScrollView: {
+    maxHeight: '60%',
   },
   modalTitle: {
     fontSize: 20,
@@ -258,10 +346,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 15,
+    marginTop: 15,
+    marginBottom: 10,
   },
   modalButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -270,24 +358,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   downloadButton: {
+    flex: 1,
     backgroundColor: '#357bd2',
   },
   deleteButton: {
+    flex: 1,
     backgroundColor: '#ff4444',
+  },
+  closeButton: {
+    backgroundColor: '#357bd2',
+    width: '100%',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
   },
-  closeButton: {
-    backgroundColor: '#357bd2',
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+  centered: {
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
+    textAlign: 'center',
   },
 }); 
