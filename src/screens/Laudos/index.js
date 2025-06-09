@@ -10,19 +10,58 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { useFocusEffect } from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
 import api from "../../services/api";
 
 export default function Laudos() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [selectedLaudo, setSelectedLaudo] = useState(null);
   const [laudos, setLaudos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [sortOrder, setSortOrder] = useState('recent');
+  const [selectedResponsible, setSelectedResponsible] = useState('all');
+  const [responsibles, setResponsibles] = useState([]);
 
-  useEffect(() => {
-    fetchLaudos();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchLaudos();
+      fetchResponsibles();
+    }, [])
+  );
+
+  const fetchResponsibles = async () => {
+    try {
+      const response = await api.get('/api/users');
+      setResponsibles(response.data);
+    } catch (err) {
+      console.error('Erro ao buscar responsáveis:', err);
+    }
+  };
+
+  const getFilteredAndSortedLaudos = () => {
+    let filtered = [...laudos];
+
+    // Filtrar por responsável
+    if (selectedResponsible !== 'all') {
+      filtered = filtered.filter(laudo => 
+        laudo.expertResponsible?._id === selectedResponsible
+      );
+    }
+
+    // Ordenar por data
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.dateEmission);
+      const dateB = new Date(b.dateEmission);
+      return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  };
 
   const fetchLaudos = async () => {
     try {
@@ -90,13 +129,21 @@ export default function Laudos() {
 
   const handleExcluir = async () => {
     try {
+      setLoadingDelete(true);
       await api.delete(`/api/reports/${selectedLaudo._id}`);
+      setConfirmModalVisible(false);
       setModalVisible(false);
       fetchLaudos(); // Atualiza a lista após excluir
     } catch (err) {
       console.error('Erro ao excluir laudo:', err);
       setError('Erro ao excluir laudo');
+    } finally {
+      setLoadingDelete(false);
     }
+  };
+
+  const handleExcluirClick = () => {
+    setConfirmModalVisible(true);
   };
 
   if (loading) {
@@ -119,6 +166,43 @@ export default function Laudos() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Gerenciamento de Laudos</Text>
 
+      {/* Filtros */}
+      <View style={styles.filtersContainer}>
+        <View style={styles.filterItem}>
+          <Text style={styles.filterLabel}>Ordenar por:</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={sortOrder}
+              onValueChange={(value) => setSortOrder(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Mais recente" value="recent" />
+              <Picker.Item label="Mais antigo" value="old" />
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.filterItem}>
+          <Text style={styles.filterLabel}>Responsável:</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedResponsible}
+              onValueChange={(value) => setSelectedResponsible(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Todos" value="all" />
+              {responsibles.map((responsible) => (
+                <Picker.Item 
+                  key={responsible._id} 
+                  label={responsible.name} 
+                  value={responsible._id} 
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </View>
+
       {/* Tabela */}
       <View style={styles.tableContainer}>
         {/* Cabeçalho da tabela */}
@@ -130,7 +214,7 @@ export default function Laudos() {
         </View>
 
         {/* Linhas da tabela */}
-        {laudos.map((laudo) => (
+        {getFilteredAndSortedLaudos().map((laudo) => (
           <View key={laudo._id} style={styles.tableRow}>
             <Text style={[styles.cell, styles.titleCell]}>{laudo.title}</Text>
             <Text style={styles.cell}>
@@ -155,6 +239,9 @@ export default function Laudos() {
           </View>
         ))}
       </View>
+
+      {/* Margem para o Tab Navigator */}
+      <View style={styles.bottomMargin} />
 
       {/* Modal de Detalhes */}
       <Modal
@@ -211,10 +298,17 @@ export default function Laudos() {
 
               <TouchableOpacity 
                 style={[styles.modalButton, styles.deleteButton]}
-                onPress={handleExcluir}
+                onPress={handleExcluirClick}
+                disabled={loadingDelete}
               >
-                <Icon name="delete" size={16} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.buttonText}>Excluir</Text>
+                {loadingDelete ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Icon name="delete" size={16} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.buttonText}>Excluir</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -224,6 +318,44 @@ export default function Laudos() {
             >
               <Text style={styles.buttonText}>Fechar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Modal
+        visible={confirmModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmModalTitle}>Confirmar Exclusão</Text>
+            <Text style={styles.confirmModalText}>
+              Tem certeza que deseja excluir este laudo? Esta ação não pode ser desfeita.
+            </Text>
+            
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setConfirmModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleExcluir}
+                disabled={loadingDelete}
+              >
+                {loadingDelete ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Excluir</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -382,5 +514,64 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     fontSize: 16,
     textAlign: 'center',
+  },
+  confirmModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  confirmModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  confirmModalText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#666',
+  },
+  filtersContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 10,
+  },
+  filterItem: {
+    flex: 1,
+  },
+  filterLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    height: 45,
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 45,
+    fontSize: 14,
+    color: '#333',
+  },
+  bottomMargin: {
+    height: 120,
   },
 }); 
