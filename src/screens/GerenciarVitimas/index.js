@@ -11,9 +11,27 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import ModalVitima from '../../components/ModalVitima';
 import ModalDetalhesVitima from '../../components/ModalDetalhesVitima';
 import api from '../../services/api';
+
+const SEXO_OPTIONS = [
+  { label: 'Todos', value: '' },
+  { label: 'Feminino', value: 'feminino' },
+  { label: 'Masculino', value: 'masculino' },
+  { label: 'Outro', value: 'outro' },
+];
+
+const ETNIA_OPTIONS = [
+  { label: 'Todas', value: '' },
+  { label: 'Branca', value: 'branca' },
+  { label: 'Parda', value: 'parda' },
+  { label: 'Preta', value: 'preta' },
+  { label: 'Indígena', value: 'indigena' },
+  { label: 'Amarela', value: 'amarela' },
+  { label: 'Outro', value: 'outro' },
+];
 
 export default function GerenciarVitimas() {
   const [modalCadastroVisible, setModalCadastroVisible] = useState(false);
@@ -22,6 +40,8 @@ export default function GerenciarVitimas() {
   const [vitimas, setVitimas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filtroSexo, setFiltroSexo] = useState('');
+  const [filtroEtnia, setFiltroEtnia] = useState('');
 
   useEffect(() => {
     fetchVitimas();
@@ -62,7 +82,7 @@ export default function GerenciarVitimas() {
 
   const handleSaveVitima = async (novaVitima) => {
     try {
-      await fetchVitimas(); // Atualiza a lista após criar nova vítima
+      await fetchVitimas();
       Alert.alert('Sucesso', 'Vítima cadastrada com sucesso!');
     } catch (error) {
       console.error('Erro ao atualizar lista de vítimas:', error);
@@ -82,9 +102,55 @@ export default function GerenciarVitimas() {
     }
   };
 
+  const vitimasFiltradas = vitimas.filter(vitima => {
+    const matchSexo = !filtroSexo || vitima.sex?.toLowerCase() === filtroSexo.toLowerCase();
+    const matchEtnia = !filtroEtnia || vitima.ethnicity?.toLowerCase() === filtroEtnia.toLowerCase();
+    return matchSexo && matchEtnia;
+  });
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Text style={styles.title}>Gerenciamento de Vítimas</Text>
+
+      <View style={styles.filtrosContainer}>
+        <View style={styles.filtroGroup}>
+          <Text style={styles.filtroLabel}>Sexo</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={filtroSexo}
+              onValueChange={(value) => setFiltroSexo(value)}
+              style={styles.picker}
+            >
+              {SEXO_OPTIONS.map((option) => (
+                <Picker.Item
+                  key={option.value}
+                  label={option.label}
+                  value={option.value}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.filtroGroup}>
+          <Text style={styles.filtroLabel}>Etnia</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={filtroEtnia}
+              onValueChange={(value) => setFiltroEtnia(value)}
+              style={styles.picker}
+            >
+              {ETNIA_OPTIONS.map((option) => (
+                <Picker.Item
+                  key={option.value}
+                  label={option.label}
+                  value={option.value}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </View>
 
       <TouchableOpacity
         style={styles.addButton}
@@ -116,7 +182,7 @@ export default function GerenciarVitimas() {
           </View>
         ) : (
           <View style={styles.tableBody}>
-            {vitimas.map((vitima) => (
+            {vitimasFiltradas.map((vitima) => (
               <View key={vitima._id} style={styles.tableRow}>
                 <Text style={[styles.cell, styles.nomeCell]}>{vitima.name || 'Sem nome'}</Text>
                 <Text style={styles.cell}>{getSexoLabel(vitima.sex)}</Text>
@@ -190,6 +256,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  filtrosContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 10,
+  },
+  filtroGroup: {
+    flex: 1,
+  },
+  filtroLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#357bd2',
+    marginBottom: 5,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
   },
   tableContainer: {
     borderWidth: 1,
@@ -265,6 +355,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   bottomPadding: {
-    height: 80, // Margem para o Tab Navigator
+    height: 80,
   },
 }); 
