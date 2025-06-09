@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import ModalVitima from "../../components/ModalVitima";
+import api from '../../services/api';
 
 export default function AdicionarCaso() {
   const [tipo, setTipo] = useState('');
@@ -27,6 +28,18 @@ export default function AdicionarCaso() {
   const [identificadoVitima, setIdentificadoVitima] = useState('');
   const [identificacaoVitima, setIdentificacaoVitima] = useState('');
   const [observacoesVitima, setObservacoesVitima] = useState('');
+
+  // Estados para os campos do formulário
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [numberProcess, setNumberProcess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [responsible, setResponsible] = useState('');
+  const [victim, setVictim] = useState('');
+  const [usuarios, setUsuarios] = useState([]); // lista de responsáveis
+  const [vitimas, setVitimas] = useState([]); // lista de vítimas
 
   const tipos = [
     "Homicídio",
@@ -72,6 +85,68 @@ export default function AdicionarCaso() {
     setModalVisible(false);
   };
 
+  // Função para criar caso
+  const handleCreateCase = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      // Mapeia status para o enum do backend
+      let statusMapped = '';
+      if (status === 'Em andamento') statusMapped = 'em_andamento';
+      else if (status === 'Finalizado') statusMapped = 'finalizado';
+      else if (status === 'Arquivado') statusMapped = 'arquivado';
+      else statusMapped = 'em_andamento';
+
+      const payload = {
+        type: tipo,
+        title,
+        description,
+        status: statusMapped,
+        numberProcess,
+        openingDate: dataAbertura,
+        closingDate: dataFechamento || undefined,
+        responsible: responsible || undefined,
+        victim: victim || undefined,
+      };
+      await api.post('/api/cases', payload);
+      setSuccess('Caso criado com sucesso!');
+      // Limpa os campos
+      setTipo('');
+      setTitle('');
+      setDescription('');
+      setStatus('');
+      setNumberProcess('');
+      setDataAbertura(new Date());
+      setDataFechamento(null);
+      setResponsible('');
+      setVictim('');
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erro ao criar caso');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Busca apenas usuários com perfil de perito
+        const respUsuarios = await api.get("/api/users/");
+        setUsuarios(respUsuarios.data);
+        const respVitimas = await api.get("/api/victims/");
+        setVitimas(respVitimas.data);
+      } catch (err) {
+        // Pode exibir erro se quiser
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.formContainer}>
@@ -95,6 +170,8 @@ export default function AdicionarCaso() {
         <TextInput
           style={styles.input}
           placeholder="Digite o título do caso..."
+          value={title}
+          onChangeText={setTitle}
         />
 
         <Text style={styles.label}>Descrição</Text>
@@ -103,6 +180,8 @@ export default function AdicionarCaso() {
           placeholder="Digite a descrição (opcional)..."
           multiline={true}
           numberOfLines={4}
+          value={description}
+          onChangeText={setDescription}
         />
 
         <Text style={styles.label}>Status</Text>
@@ -124,6 +203,8 @@ export default function AdicionarCaso() {
           style={styles.input}
           placeholder="Digite o número do processo..."
           keyboardType="numeric"
+          value={numberProcess}
+          onChangeText={setNumberProcess}
         />
 
         <Text style={styles.label}>Data de abertura</Text>
@@ -170,24 +251,50 @@ export default function AdicionarCaso() {
           />
         )}
 
-        <Text style={styles.label}>Vítima</Text>
-        <View style={styles.victimContainer}>
-          <View style={[styles.inputContainer, styles.victimDropdown]}>
-            <Icon name="arrow-drop-down" size={24} color="gray" style={styles.icon} />
-            <Text style={styles.dropdownPlaceholder}>Selecione a vítima...</Text>
-          </View>
-          <Text style={styles.orText}>ou</Text>
-          <TouchableOpacity 
-            style={styles.createVictimButton}
-            onPress={() => setModalVisible(true)}
+        <Text style={styles.label}>Responsável</Text>
+        <View style={styles.inputContainer}>
+          <Picker
+            selectedValue={responsible}
+            onValueChange={setResponsible}
+            style={styles.picker}
           >
-            <Text style={styles.createVictimButtonText}>Criar vítima</Text>
-          </TouchableOpacity>
+            <Picker.Item label="Selecione o responsável..." value="" />
+            {usuarios.map((user) => (
+              <Picker.Item key={user._id} label={user.nome || user.email} value={user._id} />
+            ))}
+          </Picker>
         </View>
 
+        <Text style={styles.label}>Vítima</Text>
+        <View style={styles.inputContainer}>
+          <Picker
+            selectedValue={victim}
+            onValueChange={setVictim}
+            style={styles.picker}
+          >
+            <Picker.Item label="Selecione a vítima..." value="" />
+            {vitimas.map((v) => (
+              <Picker.Item key={v._id} label={v.nome || v._id} value={v._id} />
+            ))}
+          </Picker>
+        </View>
+        <Text style={{textAlign:'center', color:'#888', marginBottom:10}}>Ou crie uma nova vítima abaixo:</Text>
+        <TouchableOpacity 
+          style={styles.createVictimButton}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={styles.createVictimButtonText}>Criar vítima</Text>
+        </TouchableOpacity>
+
+        {error ? (
+          <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
+        ) : null}
+        {success ? (
+          <Text style={{ color: 'green', textAlign: 'center', marginBottom: 10 }}>{success}</Text>
+        ) : null}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.createButton}>
-            <Text style={styles.buttonText}>Criar</Text>
+          <TouchableOpacity style={styles.createButton} onPress={handleCreateCase} disabled={loading}>
+            <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelButton}>
             <Text style={styles.buttonText}>Cancelar</Text>
@@ -366,4 +473,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     minWidth: 120,
   },
-}); 
+});

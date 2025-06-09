@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
+import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // NAVEGAÇÃO PARA A TELA DE CADASTRO
 import { useNavigation } from "@react-navigation/native";
@@ -17,6 +19,40 @@ import * as Animatable from "react-native-animatable";
 
 export default function Login() {
   const navigation = useNavigation();
+  // Estados para email e senha
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Função para login
+  const handleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await api.post('/api/users/login', {
+        email,
+        password,
+      });
+      const data = response.data;
+      if (response.status === 200 && data.token) {
+        // Salva o token JWT no AsyncStorage
+        await AsyncStorage.setItem('token', data.token);
+        navigation.navigate("MainApp");
+      } else {
+        setError(data.message || "Email ou senha inválidos");
+      }
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Erro ao conectar ao servidor");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Animatable.View
@@ -51,6 +87,8 @@ export default function Login() {
             placeholder="Digite seu email..."
             autoCorrect={false}
             autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
           />
         </View>
 
@@ -65,14 +103,19 @@ export default function Login() {
             autoCorrect={false}
             autoCapitalize="none"
             secureTextEntry={true}
+            value={password}
+            onChangeText={setPassword}
           />
         </View>
-
+        {error ? (
+          <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
+        ) : null}
         <TouchableOpacity 
           style={styles.buttonLogin}
-          onPress={() => navigation.navigate("MainApp")}
+          onPress={handleLogin}
+          disabled={loading}
         >
-          <Text style={styles.textButtonLogin}>Login</Text>
+          <Text style={styles.textButtonLogin}>{loading ? 'Entrando...' : 'Login'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buttonCadastro}>
           <Text
