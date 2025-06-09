@@ -27,6 +27,9 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedEvidenciaIndex, setSelectedEvidenciaIndex] = useState(0);
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [selectedEvidenciaId, setSelectedEvidenciaId] = useState(null);
 
   const handleAddEvidencia = () => {
     setEvidencias([
@@ -70,6 +73,20 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
   const handleArquivoSelect = (index) => {
     // Implementar seleção de arquivo posteriormente
     console.log('Selecionar arquivo para evidência', index);
+  };
+
+  const handleGerarLaudo = (evidenciaId) => {
+    setSelectedEvidenciaId(evidenciaId);
+    setShowConfirmPopup(true);
+  };
+
+  const handleConfirmarGeracao = () => {
+    setShowConfirmPopup(false);
+    setShowSuccessPopup(true);
+  };
+
+  const handleFecharSuccess = () => {
+    setShowSuccessPopup(false);
   };
 
   return (
@@ -152,6 +169,16 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
                     <Text style={styles.fileButtonText}>Selecionar arquivo</Text>
                   </TouchableOpacity>
                 </View>
+
+                <View style={styles.evidenciaActions}>
+                  <TouchableOpacity
+                    style={styles.gerarLaudoButton}
+                    onPress={() => handleGerarLaudo(evidencia.id)}
+                  >
+                    <Feather name="file-text" size={20} color="#357bd2" />
+                    <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </ScrollView>
@@ -189,6 +216,54 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
           onChange={(event, date) => handleDateChange(event, date, selectedEvidenciaIndex)}
         />
       )}
+
+      {/* Popup de Confirmação */}
+      <Modal
+        visible={showConfirmPopup}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Confirma geração de laudo para Evidência {selectedEvidenciaId}?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleConfirmarGeracao}
+              >
+                <Text style={styles.buttonText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowConfirmPopup(false)}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Popup de Sucesso */}
+      <Modal
+        visible={showSuccessPopup}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>Laudo gerado com sucesso!</Text>
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={handleFecharSuccess}
+            >
+              <Text style={styles.buttonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -327,5 +402,56 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  evidenciaActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 15,
+  },
+  gerarLaudoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#357bd2',
+    borderRadius: 8,
+    padding: 8,
+    gap: 8,
+  },
+  gerarLaudoText: {
+    color: '#357bd2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  popupContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  popupText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  popupButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  popupButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  confirmButton: {
+    backgroundColor: '#87c05e',
+  },
+  cancelButton: {
+    backgroundColor: '#ff4444',
   },
 }); 
