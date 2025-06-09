@@ -19,13 +19,7 @@ export default function ModalDetalhesUsuario({ visible, onClose, usuario }) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Detalhes do Usuário</Text>
-            <View style={styles.placeholder} />
-          </View>
+          <Text style={styles.modalTitle}>Detalhes do Usuário</Text>
           
           <ScrollView style={styles.modalScroll}>
             <View style={styles.infoSection}>
@@ -54,6 +48,13 @@ export default function ModalDetalhesUsuario({ visible, onClose, usuario }) {
               </TouchableOpacity>
             </View>
           </ScrollView>
+
+          <TouchableOpacity 
+            style={[styles.button, styles.closeButton]}
+            onPress={onClose}
+          >
+            <Text style={styles.buttonText}>Fechar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -81,25 +82,14 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  closeButton: {
-    padding: 5,
+    paddingBottom: 80,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
     textAlign: 'center',
-  },
-  placeholder: {
-    width: 34, // Mesma largura do botão de fechar para manter o título centralizado
+    marginBottom: 20,
   },
   modalScroll: {
     maxHeight: '100%',
@@ -121,7 +111,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: 20,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   button: {
     flexDirection: 'row',
@@ -138,6 +128,16 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: "#ff0000",
+  },
+  closeButton: {
+    backgroundColor: "#357bd2",
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   buttonText: {
     color: "#fff",

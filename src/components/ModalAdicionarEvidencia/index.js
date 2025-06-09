@@ -105,7 +105,7 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
               <View key={evidencia.id} style={styles.evidenciaCard}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Evidência {evidencia.id}</Text>
-                  {evidencias.length > 1 && (
+                  {evidencias.length > 1 && index !== 0 && (
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => handleRemoveEvidencia(index)}
@@ -169,41 +169,33 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
                     <Text style={styles.fileButtonText}>Selecionar arquivo</Text>
                   </TouchableOpacity>
                 </View>
-
-                <View style={styles.evidenciaActions}>
-                  <TouchableOpacity
-                    style={styles.gerarLaudoButton}
-                    onPress={() => handleGerarLaudo(evidencia.id)}
-                  >
-                    <Feather name="file-text" size={20} color="#357bd2" />
-                    <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             ))}
           </ScrollView>
 
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddEvidencia}
-          >
-            <Feather name="plus" size={24} color="#fff" />
-            <Text style={styles.addButtonText}>Adicionar Evidência</Text>
-          </TouchableOpacity>
+          <View style={styles.bottomButtonsContainer}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddEvidencia}
+            >
+              <Feather name="plus" size={24} color="#fff" />
+              <Text style={styles.addButtonText}>Adicionar Evidência</Text>
+            </TouchableOpacity>
 
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={() => onSave(evidencias)}
-            >
-              <Text style={styles.buttonText}>Salvar Tudo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.buttonText}>Cancelar</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={() => onSave(evidencias)}
+              >
+                <Text style={styles.buttonText}>Salvar Tudo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -278,9 +270,11 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 20,
+    padding: 10,
     width: '90%',
-    maxHeight: '80%',
+    maxHeight: '95%',
+    paddingBottom: 2,
+    justifyContent: 'space-between',
   },
   modalTitle: {
     fontSize: 24,
@@ -290,7 +284,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   evidenciasContainer: {
-    maxHeight: '60%',
+    maxHeight: '75%',
+    marginBottom: 2,
   },
   evidenciaCard: {
     backgroundColor: '#f5f5f5',
@@ -366,14 +361,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#357bd2',
   },
+  bottomButtonsContainer: {
+    marginTop: 'auto',
+  },
   addButton: {
-    backgroundColor: '#87c05e',
+    backgroundColor: '#357bd2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
-    marginVertical: 15,
+    marginBottom: 12,
     gap: 8,
   },
   addButtonText: {
@@ -384,7 +382,8 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 15,
+    marginBottom: 8,
   },
   modalButton: {
     flex: 1,

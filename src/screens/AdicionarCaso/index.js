@@ -148,183 +148,199 @@ export default function AdicionarCaso() {
   }, []);
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Adicionar Novo Caso</Text>
+    <View style={styles.mainContainer}>
+      <View style={styles.headerBar} />
+      <ScrollView style={styles.container}>
+        <View style={styles.formContainer}>
+          <Text style={styles.title}>Adicionar Novo Caso</Text>
 
-        <Text style={styles.label}>Tipo</Text>
-        <View style={styles.inputContainer}>
-          <Picker
-            selectedValue={tipo}
-            onValueChange={(itemValue) => setTipo(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione o tipo..." value="" />
-            {tipos.map((item) => (
-              <Picker.Item key={item} label={item} value={item} />
-            ))}
-          </Picker>
-        </View>
+          <Text style={styles.label}>Tipo</Text>
+          <View style={styles.inputContainer}>
+            <Picker
+              selectedValue={tipo}
+              onValueChange={(itemValue) => setTipo(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione o tipo..." value="" />
+              {tipos.map((item) => (
+                <Picker.Item key={item} label={item} value={item} />
+              ))}
+            </Picker>
+          </View>
 
-        <Text style={styles.label}>Título</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Digite o título do caso..."
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        <Text style={styles.label}>Descrição</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Digite a descrição (opcional)..."
-          multiline={true}
-          numberOfLines={4}
-          value={description}
-          onChangeText={setDescription}
-        />
-
-        <Text style={styles.label}>Status</Text>
-        <View style={styles.inputContainer}>
-          <Picker
-            selectedValue={status}
-            onValueChange={(itemValue) => setStatus(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione o status..." value="" />
-            {statusOptions.map((item) => (
-              <Picker.Item key={item} label={item} value={item} />
-            ))}
-          </Picker>
-        </View>
-
-        <Text style={styles.label}>Nº do Processo</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Digite o número do processo..."
-          keyboardType="numeric"
-          value={numberProcess}
-          onChangeText={setNumberProcess}
-        />
-
-        <Text style={styles.label}>Data de abertura</Text>
-        <TouchableOpacity 
-          style={styles.inputContainer}
-          onPress={() => setShowAberturaPicker(true)}
-        >
-          <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
-          <Text style={styles.dropdownPlaceholder}>{formatDate(dataAbertura)}</Text>
-        </TouchableOpacity>
-        {showAberturaPicker && (
-          <DateTimePicker
-            value={dataAbertura}
-            mode="date"
-            display="default"
-            onChange={onAberturaChange}
+          <Text style={styles.label}>Título</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite o título do caso..."
+            value={title}
+            onChangeText={setTitle}
           />
-        )}
 
-        <Text style={styles.label}>Data de fechamento</Text>
-        <View style={styles.dateContainer}>
+          <Text style={styles.label}>Descrição</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Digite a descrição (opcional)..."
+            multiline={true}
+            numberOfLines={4}
+            value={description}
+            onChangeText={setDescription}
+          />
+
+          <Text style={styles.label}>Status</Text>
+          <View style={styles.inputContainer}>
+            <Picker
+              selectedValue={status}
+              onValueChange={(itemValue) => setStatus(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione o status..." value="" />
+              {statusOptions.map((item) => (
+                <Picker.Item key={item} label={item} value={item} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Nº do Processo</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite o número do processo..."
+            keyboardType="numeric"
+            value={numberProcess}
+            onChangeText={setNumberProcess}
+          />
+
+          <Text style={styles.label}>Data de abertura</Text>
           <TouchableOpacity 
-            style={[styles.inputContainer, styles.dateInputContainer]}
-            onPress={() => setShowFechamentoPicker(true)}
+            style={styles.inputContainer}
+            onPress={() => setShowAberturaPicker(true)}
           >
             <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
-            <Text style={styles.dropdownPlaceholder}>{formatDate(dataFechamento)}</Text>
+            <Text style={styles.dropdownPlaceholder}>{formatDate(dataAbertura)}</Text>
           </TouchableOpacity>
-          {dataFechamento && (
-            <TouchableOpacity 
-              style={styles.clearButton}
-              onPress={limparDataFechamento}
-            >
-              <Icon name="close" size={24} color="#ff0000" />
-            </TouchableOpacity>
+          {showAberturaPicker && (
+            <DateTimePicker
+              value={dataAbertura}
+              mode="date"
+              display="default"
+              onChange={onAberturaChange}
+            />
           )}
-        </View>
-        {showFechamentoPicker && (
-          <DateTimePicker
-            value={dataFechamento || new Date()}
-            mode="date"
-            display="default"
-            onChange={onFechamentoChange}
+
+          <Text style={styles.label}>Data de fechamento</Text>
+          <View style={styles.dateContainer}>
+            <TouchableOpacity 
+              style={[styles.inputContainer, styles.dateInputContainer]}
+              onPress={() => setShowFechamentoPicker(true)}
+            >
+              <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
+              <Text style={styles.dropdownPlaceholder}>{formatDate(dataFechamento)}</Text>
+            </TouchableOpacity>
+            {dataFechamento && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={limparDataFechamento}
+              >
+                <Icon name="close" size={24} color="#ff0000" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {showFechamentoPicker && (
+            <DateTimePicker
+              value={dataFechamento || new Date()}
+              mode="date"
+              display="default"
+              onChange={onFechamentoChange}
+            />
+          )}
+
+          <Text style={styles.label}>Responsável</Text>
+          <View style={styles.inputContainer}>
+            <Picker
+              selectedValue={responsible}
+              onValueChange={setResponsible}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione o responsável..." value="" />
+              {usuarios.map((user) => (
+                <Picker.Item key={user._id} label={user.nome || user.email} value={user._id} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Vítima</Text>
+          <View style={styles.inputContainer}>
+            <Picker
+              selectedValue={victim}
+              onValueChange={setVictim}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione a vítima..." value="" />
+              {vitimas.map((v) => (
+                <Picker.Item key={v._id} label={v.nome || v._id} value={v._id} />
+              ))}
+            </Picker>
+          </View>
+          <Text style={{textAlign:'center', color:'#888', marginBottom:10}}>Ou crie uma nova vítima abaixo:</Text>
+          <TouchableOpacity 
+            style={styles.createVictimButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={styles.createVictimButtonText}>Criar vítima</Text>
+          </TouchableOpacity>
+
+          {error ? (
+            <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
+          ) : null}
+          {success ? (
+            <Text style={{ color: 'green', textAlign: 'center', marginBottom: 10 }}>{success}</Text>
+          ) : null}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.createButton} onPress={handleCreateCase} disabled={loading}>
+              <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton}>
+              <Text style={styles.buttonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ModalVitima 
+            visible={modalVisible}
+            onClose={() => setModalVisible(false)}
+            onSave={handleSaveVitima}
           />
-        )}
-
-        <Text style={styles.label}>Responsável</Text>
-        <View style={styles.inputContainer}>
-          <Picker
-            selectedValue={responsible}
-            onValueChange={setResponsible}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione o responsável..." value="" />
-            {usuarios.map((user) => (
-              <Picker.Item key={user._id} label={user.nome || user.email} value={user._id} />
-            ))}
-          </Picker>
         </View>
-
-        <Text style={styles.label}>Vítima</Text>
-        <View style={styles.inputContainer}>
-          <Picker
-            selectedValue={victim}
-            onValueChange={setVictim}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione a vítima..." value="" />
-            {vitimas.map((v) => (
-              <Picker.Item key={v._id} label={v.nome || v._id} value={v._id} />
-            ))}
-          </Picker>
-        </View>
-        <Text style={{textAlign:'center', color:'#888', marginBottom:10}}>Ou crie uma nova vítima abaixo:</Text>
-        <TouchableOpacity 
-          style={styles.createVictimButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.createVictimButtonText}>Criar vítima</Text>
-        </TouchableOpacity>
-
-        {error ? (
-          <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
-        ) : null}
-        {success ? (
-          <Text style={{ color: 'green', textAlign: 'center', marginBottom: 10 }}>{success}</Text>
-        ) : null}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.createButton} onPress={handleCreateCase} disabled={loading}>
-            <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton}>
-            <Text style={styles.buttonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ModalVitima 
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          onSave={handleSaveVitima}
-        />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  headerBar: {
+    height: 120,
+    backgroundColor: '#357bd2',
+    width: '100%',
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
   },
   formContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -60,
     padding: 20,
-    paddingBottom: 100,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
-    marginTop: 30,
+    marginTop: 50,
     textAlign: 'center',
     color: "#333",
   },
