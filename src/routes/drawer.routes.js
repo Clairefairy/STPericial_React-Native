@@ -4,6 +4,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome6, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { View, Image, StyleSheet, TouchableOpacity } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Dashboard from "../screens/Dashboard";
 import Casos from "../screens/Casos";
@@ -20,6 +21,18 @@ const Drawer = createDrawerNavigator();
 
 export default function DrawerRoutes() {
   const navigation = useNavigation();
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
 
   return (
     <Drawer.Navigator
@@ -115,10 +128,7 @@ export default function DrawerRoutes() {
         listeners={{
           drawerItemPress: (e) => {
             e.preventDefault();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
+            handleLogout();
           },
         }}
       />

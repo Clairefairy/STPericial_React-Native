@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,22 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Verifica se existe token ao carregar a tela
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          navigation.navigate("MainApp");
+        }
+      } catch (error) {
+        console.error('Erro ao verificar token:', error);
+      }
+    };
+
+    checkToken();
+  }, []);
 
   // Função para login
   const handleLogin = async () => {
