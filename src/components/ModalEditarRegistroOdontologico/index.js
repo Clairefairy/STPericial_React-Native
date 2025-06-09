@@ -9,14 +9,13 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import api from "../../services/api";
 
-export default function ModalRegistroOdontologico({
+export default function ModalEditarRegistroOdontologico({
   visible,
   onClose,
   onSave,
+  registro,
   loading,
 }) {
   const [dentesAusentes, setDentesAusentes] = useState([]);
@@ -24,54 +23,14 @@ export default function ModalRegistroOdontologico({
   const [marcasOdontologicas, setMarcasOdontologicas] = useState([]);
   const [novaMarca, setNovaMarca] = useState("");
   const [observacoes, setObservacoes] = useState("");
-  const [vitima, setVitima] = useState(null);
-  const [searchVictim, setSearchVictim] = useState("");
-  const [filteredVictims, setFilteredVictims] = useState([]);
-  const [showVictimSuggestions, setShowVictimSuggestions] = useState(false);
-  const [loadingVictims, setLoadingVictims] = useState(false);
-  const [victims, setVictims] = useState([]);
 
   useEffect(() => {
-    fetchVictims();
-  }, []);
-
-  const fetchVictims = async () => {
-    try {
-      setLoadingVictims(true);
-      const response = await api.get('/api/victims');
-      setVictims(response.data);
-    } catch (err) {
-      console.error('Erro ao buscar vítimas:', err);
-    } finally {
-      setLoadingVictims(false);
+    if (registro) {
+      setDentesAusentes(registro.missingTeeth || []);
+      setMarcasOdontologicas(registro.dentalMarks || []);
+      setObservacoes(registro.notes || "");
     }
-  };
-
-  const handleVictimSearch = (text) => {
-    setSearchVictim(text);
-    if (text.length > 0) {
-      const filtered = victims.filter(victim => 
-        victim.name?.toLowerCase().includes(text.toLowerCase()) ||
-        victim._id?.toLowerCase().includes(text.toLowerCase())
-      );
-      setFilteredVictims(filtered);
-      setShowVictimSuggestions(true);
-    } else {
-      setFilteredVictims([]);
-      setShowVictimSuggestions(false);
-    }
-  };
-
-  const handleVictimSelect = (selectedVictim) => {
-    setVitima(selectedVictim);
-    setSearchVictim(selectedVictim.name || 'Vítima sem nome');
-    setShowVictimSuggestions(false);
-  };
-
-  const handleClearVictim = () => {
-    setVitima(null);
-    setSearchVictim("");
-  };
+  }, [registro]);
 
   const handleAddDente = () => {
     if (novoDente && novoDente.length === 2 && !isNaN(novoDente)) {
@@ -100,69 +59,16 @@ export default function ModalRegistroOdontologico({
   };
 
   const handleSave = () => {
-    if (!vitima) {
-      alert('Por favor, selecione uma vítima');
-      return;
-    }
-
-    const registro = {
+    const dadosAtualizados = {
       missingTeeth: dentesAusentes,
       dentalMarks: marcasOdontologicas,
       notes: observacoes,
-      victim: vitima._id,
     };
-    onSave(registro);
+    onSave(dadosAtualizados);
   };
-
-  const renderVictimItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.victimItem}
-      onPress={() => handleVictimSelect(item)}
-    >
-      <Text style={styles.victimName}>{item.name || 'Vítima sem nome'}</Text>
-      <Text style={styles.victimId}>ID: {item._id}</Text>
-    </TouchableOpacity>
-  );
 
   const renderFormItem = () => (
     <View>
-      {/* Vítima */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Vítima</Text>
-        <View style={styles.victimSearchContainer}>
-          <TextInput
-            style={[styles.input, vitima && styles.inputDisabled]}
-            value={searchVictim}
-            onChangeText={handleVictimSearch}
-            placeholder="Buscar vítima por nome ou ID"
-            editable={!vitima}
-          />
-          {vitima && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearVictim}
-            >
-              <Icon name="close" size={20} color="#666" />
-            </TouchableOpacity>
-          )}
-        </View>
-        {showVictimSuggestions && !vitima && (
-          <View style={styles.suggestionsContainer}>
-            {loadingVictims ? (
-              <ActivityIndicator size="small" color="#357bd2" />
-            ) : (
-              <FlatList
-                data={filteredVictims}
-                renderItem={renderVictimItem}
-                keyExtractor={item => item._id}
-                nestedScrollEnabled={true}
-                style={styles.suggestionsList}
-              />
-            )}
-          </View>
-        )}
-      </View>
-
       {/* Dentes Ausentes */}
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Dentes Ausentes</Text>
@@ -254,10 +160,10 @@ export default function ModalRegistroOdontologico({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Adicionar Registro Odontológico</Text>
+          <Text style={styles.modalTitle}>Editar Registro Odontológico</Text>
 
           <FlatList
-            data={[1]} // Array com um único item para renderizar o formulário
+            data={[1]}
             renderItem={renderFormItem}
             keyExtractor={() => 'form'}
             keyboardShouldPersistTaps="handled"
@@ -267,14 +173,17 @@ export default function ModalRegistroOdontologico({
           {/* Botões */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.button, styles.createButton]}
+              style={[styles.button, styles.saveButton]}
               onPress={handleSave}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Criar</Text>
+                <>
+                  <Icon name="save" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.buttonText}>Salvar</Text>
+                </>
               )}
             </TouchableOpacity>
             <TouchableOpacity
@@ -304,6 +213,8 @@ const styles = StyleSheet.create({
     padding: 20,
     width: "90%",
     maxHeight: "80%",
+    position: 'relative',
+    paddingBottom: 80,
   },
   modalTitle: {
     fontSize: 20,
@@ -312,8 +223,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#333",
   },
-  scrollView: {
-    maxHeight: "80%",
+  formList: {
+    maxHeight: "60%",
   },
   inputContainer: {
     marginBottom: 15,
@@ -374,87 +285,32 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 2,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  picker: {
-    height: 50,
-  },
   buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
   },
   button: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 15,
     borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 5,
   },
-  createButton: {
-    backgroundColor: "#87c05e",
+  saveButton: {
+    backgroundColor: '#357bd2',
   },
   cancelButton: {
-    backgroundColor: "#ff0000",
+    backgroundColor: '#666',
   },
   buttonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "bold",
-  },
-  victimSearchContainer: {
-    position: 'relative',
-  },
-  inputDisabled: {
-    backgroundColor: '#f0f0f0',
-    color: '#666',
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-    padding: 5,
-  },
-  suggestionsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    maxHeight: 200,
-    zIndex: 1000,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  suggestionsList: {
-    maxHeight: 200,
-  },
-  victimItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  victimName: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 4,
-  },
-  victimId: {
-    fontSize: 12,
-    color: '#666',
-  },
-  formList: {
-    maxHeight: '60%',
+    fontWeight: 'bold',
   },
 }); 

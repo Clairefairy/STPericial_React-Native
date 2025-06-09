@@ -1,66 +1,153 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useFocusEffect } from '@react-navigation/native';
 import ModalRegistroOdontologico from "../../components/ModalRegistroOdontologico";
+import api from "../../services/api";
 import ModalDetalhesRegistroOdontologico from "../../components/ModalDetalhesRegistroOdontologico";
 
 export default function RegistrosOdontologicos() {
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalDetalhesVisible, setModalDetalhesVisible] = useState(false);
-  const [registroSelecionado, setRegistroSelecionado] = useState(null);
+  const [modalCreateVisible, setModalCreateVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [selectedRegistro, setSelectedRegistro] = useState(null);
+  const [registros, setRegistros] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [loadingCreate, setLoadingCreate] = useState(false);
 
-  // Dados de exemplo para a tabela
-  const registros = [
-    {
-      id: 1,
-      vitima: "João Silva",
-      notas: "Exame odontológico realizado em 15/03/2024. Identificação de características dentárias específicas.",
-      dentesAusentes: ["11", "12", "21"],
-      marcasOdontologicas: "Restauração em resina composta",
-      observacoes: "Paciente apresenta boa higiene bucal. Necessário acompanhamento periódico.",
-    },
-    {
-      id: 2,
-      vitima: "Maria Santos",
-      notas: "Registro de arcada dentária superior e inferior. Documentação fotográfica realizada.",
-      dentesAusentes: ["16", "26"],
-      marcasOdontologicas: "Prótese parcial removível",
-      observacoes: "Documentação fotográfica completa realizada. Arcada superior com ausência de molares.",
-    },
-    {
-      id: 3,
-      vitima: "Pedro Oliveira",
-      notas: "Análise de restaurações e próteses dentárias. Mapeamento completo da arcada.",
-      dentesAusentes: ["31", "32", "41", "42"],
-      marcasOdontologicas: "Prótese total superior",
-      observacoes: "Paciente edêntulo total na arcada superior. Prótese total em bom estado de conservação.",
-    },
-  ];
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchRegistros();
+    }, [])
+  );
 
-  const handleSaveRegistro = (registro) => {
-    console.log("Novo registro:", registro);
-    // Aqui você implementará a lógica para salvar o registro
+  const fetchRegistros = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/dentalRecord');
+      const registrosData = response.data;
+
+      // Buscar detalhes das vítimas
+      const registrosComVitimas = await Promise.all(
+        registrosData.map(async (registro) => {
+          if (registro.victim) {
+            try {
+              const victimResponse = await api.get(`/api/victims/${registro.victim}`);
+              return { ...registro, victim: victimResponse.data };
+            } catch (err) {
+              console.error('Erro ao buscar detalhes da vítima:', err);
+              return registro;
+            }
+          }
+          return registro;
+        })
+      );
+
+      setRegistros(registrosComVitimas);
+      setError(null);
+    } catch (err) {
+      console.error('Erro ao buscar registros:', err);
+      setError('Erro ao carregar registros odontológicos');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOpenDetalhes = (registro) => {
-    setRegistroSelecionado(registro);
-    setModalDetalhesVisible(true);
+  const handleDetalhes = async (registro) => {
+    try {
+      setLoadingDetails(true);
+      const response = await api.get(`/api/dentalRecord/${registro._id}`);
+      const registroData = response.data;
+      
+      // Buscar detalhes da vítima
+      if (registroData.victim) {
+        try {
+          const victimResponse = await api.get(`/api/victims/${registroData.victim}`);
+          registroData.victim = victimResponse.data;
+        } catch (err) {
+          console.error('Erro ao buscar detalhes da vítima:', err);
+        }
+      }
+      
+      setSelectedRegistro(registroData);
+      setModalVisible(true);
+    } catch (err) {
+      console.error('Erro ao buscar detalhes do registro:', err);
+      setError('Erro ao carregar detalhes do registro');
+    } finally {
+      setLoadingDetails(false);
+    }
   };
+
+  const handleExcluir = async () => {
+    try {
+      setLoadingDelete(true);
+      await api.delete(`/api/dentalRecord/${selectedRegistro._id}`);
+      setConfirmModalVisible(false);
+      setModalVisible(false);
+      fetchRegistros(); // Atualiza a lista após excluir
+    } catch (err) {
+      console.error('Erro ao excluir registro:', err);
+      setError('Erro ao excluir registro');
+    } finally {
+      setLoadingDelete(false);
+    }
+  };
+
+  const handleExcluirClick = () => {
+    setConfirmModalVisible(true);
+  };
+
+  const handleCreateRegistro = async (registro) => {
+    try {
+      setLoadingCreate(true);
+      await api.post('/api/dentalRecord', registro);
+      setModalCreateVisible(false);
+      fetchRegistros(); // Atualiza a lista após criar
+    } catch (err) {
+      console.error('Erro ao criar registro:', err);
+      setError('Erro ao criar registro odontológico');
+    } finally {
+      setLoadingCreate(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#357bd2" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Gerenciamento de Registros Odontológicos</Text>
+      <Text style={styles.title}>Registros Odontológicos</Text>
 
       <TouchableOpacity 
         style={styles.createButton}
-        onPress={() => setModalVisible(true)}
+        onPress={() => setModalCreateVisible(true)}
       >
+        <Icon name="add" size={24} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.createButtonText}>Criar Registro</Text>
       </TouchableOpacity>
 
@@ -75,31 +162,85 @@ export default function RegistrosOdontologicos() {
 
         {/* Linhas da tabela */}
         {registros.map((registro) => (
-          <View key={registro.id} style={styles.tableRow}>
-            <Text style={[styles.cell, styles.vitimaCell]}>{registro.vitima}</Text>
-            <Text style={[styles.cell, styles.notasCell]}>{registro.notas}</Text>
+          <View key={registro._id} style={styles.tableRow}>
+            <Text style={[styles.cell, styles.vitimaCell]}>
+              {registro.victim?.name || 'null'}
+            </Text>
+            <Text style={[styles.cell, styles.notasCell]}>
+              {registro.notes || 'Sem notas'}
+            </Text>
             <View style={styles.actionsCell}>
               <TouchableOpacity 
                 style={styles.actionButton}
-                onPress={() => handleOpenDetalhes(registro)}
+                onPress={() => handleDetalhes(registro)}
+                disabled={loadingDetails}
               >
-                <Icon name="assignment" size={24} color="#357bd2" />
+                {loadingDetails && selectedRegistro?._id === registro._id ? (
+                  <ActivityIndicator size="small" color="#357bd2" />
+                ) : (
+                  <Icon name="assignment" size={24} color="#357bd2" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
         ))}
       </View>
 
-      <ModalRegistroOdontologico
+      {/* Margem para o Tab Navigator */}
+      <View style={styles.bottomMargin} />
+
+      {/* Modal de Detalhes */}
+      <ModalDetalhesRegistroOdontologico
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSave={handleSaveRegistro}
+        registro={selectedRegistro}
+        onUpdate={fetchRegistros}
       />
 
-      <ModalDetalhesRegistroOdontologico
-        visible={modalDetalhesVisible}
-        onClose={() => setModalDetalhesVisible(false)}
-        registro={registroSelecionado}
+      {/* Modal de Confirmação de Exclusão */}
+      <Modal
+        visible={confirmModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmModalTitle}>Confirmar Exclusão</Text>
+            <Text style={styles.confirmModalText}>
+              Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.
+            </Text>
+            
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setConfirmModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleExcluir}
+                disabled={loadingDelete}
+              >
+                {loadingDelete ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Excluir</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Criação */}
+      <ModalRegistroOdontologico
+        visible={modalCreateVisible}
+        onClose={() => setModalCreateVisible(false)}
+        onSave={handleCreateRegistro}
+        loading={loadingCreate}
       />
     </ScrollView>
   );
@@ -117,18 +258,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#333",
     textAlign: "center",
-  },
-  createButton: {
-    backgroundColor: "#357bd2",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  createButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
   },
   tableContainer: {
     borderWidth: 1,
@@ -166,13 +295,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   vitimaCell: {
-    flex: 1,
+    flex: 1.5,
   },
   notasCell: {
     flex: 2,
   },
   actionsCell: {
-    flex: 0.5,
+    flex: 1,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -181,5 +310,141 @@ const styles = StyleSheet.create({
     padding: 5,
     minWidth: 40,
     alignItems: "center",
+  },
+  bottomMargin: {
+    height: 120,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    position: 'relative',
+    paddingBottom: 80,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalScrollView: {
+    maxHeight: '60%',
+  },
+  modalInfoContainer: {
+    marginBottom: 20,
+  },
+  modalInfoRow: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  modalValue: {
+    flex: 2,
+    fontSize: 16,
+    color: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 15,
+  },
+  modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: '#357bd2',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#ff4444',
+  },
+  closeButton: {
+    backgroundColor: '#357bd2',
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  confirmModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  confirmModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  confirmModalText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#666',
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  createButton: {
+    backgroundColor: "#357bd2",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  createButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 }); 
