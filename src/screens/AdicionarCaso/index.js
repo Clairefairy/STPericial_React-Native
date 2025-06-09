@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   Platform,
   Modal,
+  FlatList,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -46,6 +46,9 @@ export default function AdicionarCaso() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [searchVictim, setSearchVictim] = useState('');
+  const [filteredVictims, setFilteredVictims] = useState([]);
+  const [showVictimSuggestions, setShowVictimSuggestions] = useState(false);
 
   const tipos = [
     "Homicídio",
@@ -126,6 +129,18 @@ export default function AdicionarCaso() {
       setIsSuccess(true);
       setFeedbackMessage('Caso criado com sucesso!');
       setShowFeedbackModal(true);
+      
+      // Limpar todos os campos
+      setTipo('');
+      setTitle('');
+      setDescription('');
+      setStatus('');
+      setNumberProcess('');
+      setDataAbertura(new Date());
+      setDataFechamento(null);
+      setResponsible('');
+      setVictim('');
+      setSearchVictim('');
     } catch (err) {
       setIsSuccess(false);
       if (err.response && err.response.data && err.response.data.message) {
@@ -150,6 +165,46 @@ export default function AdicionarCaso() {
     }
   };
 
+  const handleVictimSearch = (text) => {
+    setSearchVictim(text);
+    if (text.length > 0) {
+      const filtered = vitimas.filter(v => 
+        (v.name?.toLowerCase().includes(text.toLowerCase()) || 
+         v._id.toLowerCase().includes(text.toLowerCase()))
+      );
+      setFilteredVictims(filtered);
+      setShowVictimSuggestions(true);
+    } else {
+      setFilteredVictims([]);
+      setShowVictimSuggestions(false);
+    }
+  };
+
+  const handleVictimSelect = (selectedVictim) => {
+    setVictim(selectedVictim._id);
+    setSearchVictim(selectedVictim.name || 'Vítima sem nome');
+    setShowVictimSuggestions(false);
+  };
+
+  const handleClearVictim = () => {
+    setVictim('');
+    setSearchVictim('');
+  };
+
+  const renderVictimItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.victimSuggestionItem}
+      onPress={() => handleVictimSelect(item)}
+    >
+      <Text style={styles.victimSuggestionText}>
+        {item.name || 'Vítima sem nome'}
+      </Text>
+      <Text style={styles.victimSuggestionId}>
+        {item._id}
+      </Text>
+    </TouchableOpacity>
+  );
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -165,176 +220,207 @@ export default function AdicionarCaso() {
     fetchData();
   }, []);
 
+  const renderFormItem = () => (
+    <View style={styles.formContainer}>
+      <Text style={styles.title}>Adicionar Novo Caso</Text>
+
+      <Text style={styles.label}>Tipo</Text>
+      <View style={styles.inputContainer}>
+        <Picker
+          selectedValue={tipo}
+          onValueChange={(itemValue) => setTipo(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Selecione o tipo..." value="" />
+          {tipos.map((item) => (
+            <Picker.Item key={item} label={item} value={item} />
+          ))}
+        </Picker>
+      </View>
+
+      <Text style={styles.label}>Título</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Digite o título do caso..."
+        value={title}
+        onChangeText={setTitle}
+      />
+
+      <Text style={styles.label}>Descrição</Text>
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        placeholder="Digite a descrição (opcional)..."
+        multiline={true}
+        numberOfLines={4}
+        value={description}
+        onChangeText={setDescription}
+      />
+
+      <Text style={styles.label}>Status</Text>
+      <View style={styles.inputContainer}>
+        <Picker
+          selectedValue={status}
+          onValueChange={(itemValue) => setStatus(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Selecione o status..." value="" />
+          {statusOptions.map((item) => (
+            <Picker.Item key={item} label={item} value={item} />
+          ))}
+        </Picker>
+      </View>
+
+      <Text style={styles.label}>Nº do Processo</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Digite o número do processo..."
+        keyboardType="numeric"
+        value={numberProcess}
+        onChangeText={setNumberProcess}
+      />
+
+      <Text style={styles.label}>Data de abertura</Text>
+      <TouchableOpacity 
+        style={styles.inputContainer}
+        onPress={() => setShowAberturaPicker(true)}
+      >
+        <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
+        <Text style={styles.dropdownPlaceholder}>{formatDate(dataAbertura)}</Text>
+      </TouchableOpacity>
+      {showAberturaPicker && (
+        <DateTimePicker
+          value={dataAbertura}
+          mode="date"
+          display="default"
+          onChange={onAberturaChange}
+        />
+      )}
+
+      <Text style={styles.label}>Data de fechamento</Text>
+      <View style={styles.dateContainer}>
+        <TouchableOpacity 
+          style={[styles.inputContainer, styles.dateInputContainer]}
+          onPress={() => setShowFechamentoPicker(true)}
+        >
+          <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
+          <Text style={styles.dropdownPlaceholder}>{formatDate(dataFechamento)}</Text>
+        </TouchableOpacity>
+        {dataFechamento && (
+          <TouchableOpacity 
+            style={styles.clearButton}
+            onPress={limparDataFechamento}
+          >
+            <Icon name="close" size={24} color="#ff0000" />
+          </TouchableOpacity>
+        )}
+      </View>
+      {showFechamentoPicker && (
+        <DateTimePicker
+          value={dataFechamento || new Date()}
+          mode="date"
+          display="default"
+          onChange={onFechamentoChange}
+        />
+      )}
+
+      <Text style={styles.label}>Responsável</Text>
+      <View style={styles.inputContainer}>
+        <Picker
+          selectedValue={responsible}
+          onValueChange={setResponsible}
+          style={styles.picker}
+        >
+          <Picker.Item label="Selecione o responsável..." value="" />
+          {usuarios.map((user) => (
+            <Picker.Item key={user._id} label={user.nome || user.email} value={user._id} />
+          ))}
+        </Picker>
+      </View>
+
+      <Text style={styles.label}>Vítima</Text>
+      <View style={styles.victimSearchContainer}>
+        <View style={styles.victimInputWrapper}>
+          <TextInput
+            style={[
+              styles.victimSearchInput,
+              victim && styles.victimSearchInputDisabled
+            ]}
+            placeholder="Pesquisar vítima por nome ou ID..."
+            value={searchVictim}
+            onChangeText={handleVictimSearch}
+            onFocus={() => !victim && setShowVictimSuggestions(true)}
+            editable={!victim}
+          />
+          {victim && (
+            <TouchableOpacity
+              style={styles.clearVictimButton}
+              onPress={handleClearVictim}
+            >
+              <Icon name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+        {showVictimSuggestions && filteredVictims.length > 0 && !victim && (
+          <View style={styles.suggestionsContainer}>
+            <FlatList
+              data={filteredVictims}
+              renderItem={renderVictimItem}
+              keyExtractor={item => item._id}
+              style={styles.suggestionsList}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+            />
+          </View>
+        )}
+      </View>
+      <Text style={{textAlign:'center', color:'#888', marginBottom:10}}>Ou crie uma nova vítima abaixo:</Text>
+      <TouchableOpacity 
+        style={styles.createVictimButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <Text style={styles.createVictimButtonText}>Criar vítima</Text>
+      </TouchableOpacity>
+
+      {error ? (
+        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
+      ) : null}
+      {success ? (
+        <Text style={{ color: 'green', textAlign: 'center', marginBottom: 10 }}>{success}</Text>
+      ) : null}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={[styles.createButton, loading && styles.disabledButton]} 
+          onPress={handleCreateCase} 
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.cancelButton}
+          onPress={handleCancel}
+        >
+          <Text style={styles.buttonText}>Cancelar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.mainContainer}>
       <View style={styles.headerBar} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Adicionar Novo Caso</Text>
+      <FlatList
+        data={[1]} // Array com um único item para renderizar o formulário
+        renderItem={renderFormItem}
+        keyExtractor={() => 'form'}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      />
 
-          <Text style={styles.label}>Tipo</Text>
-          <View style={styles.inputContainer}>
-            <Picker
-              selectedValue={tipo}
-              onValueChange={(itemValue) => setTipo(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Selecione o tipo..." value="" />
-              {tipos.map((item) => (
-                <Picker.Item key={item} label={item} value={item} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Título</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Digite o título do caso..."
-            value={title}
-            onChangeText={setTitle}
-          />
-
-          <Text style={styles.label}>Descrição</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Digite a descrição (opcional)..."
-            multiline={true}
-            numberOfLines={4}
-            value={description}
-            onChangeText={setDescription}
-          />
-
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.inputContainer}>
-            <Picker
-              selectedValue={status}
-              onValueChange={(itemValue) => setStatus(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Selecione o status..." value="" />
-              {statusOptions.map((item) => (
-                <Picker.Item key={item} label={item} value={item} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Nº do Processo</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Digite o número do processo..."
-            keyboardType="numeric"
-            value={numberProcess}
-            onChangeText={setNumberProcess}
-          />
-
-          <Text style={styles.label}>Data de abertura</Text>
-          <TouchableOpacity 
-            style={styles.inputContainer}
-            onPress={() => setShowAberturaPicker(true)}
-          >
-            <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
-            <Text style={styles.dropdownPlaceholder}>{formatDate(dataAbertura)}</Text>
-          </TouchableOpacity>
-          {showAberturaPicker && (
-            <DateTimePicker
-              value={dataAbertura}
-              mode="date"
-              display="default"
-              onChange={onAberturaChange}
-            />
-          )}
-
-          <Text style={styles.label}>Data de fechamento</Text>
-          <View style={styles.dateContainer}>
-            <TouchableOpacity 
-              style={[styles.inputContainer, styles.dateInputContainer]}
-              onPress={() => setShowFechamentoPicker(true)}
-            >
-              <Icon name="calendar-today" size={24} color="gray" style={styles.icon} />
-              <Text style={styles.dropdownPlaceholder}>{formatDate(dataFechamento)}</Text>
-            </TouchableOpacity>
-            {dataFechamento && (
-              <TouchableOpacity 
-                style={styles.clearButton}
-                onPress={limparDataFechamento}
-              >
-                <Icon name="close" size={24} color="#ff0000" />
-              </TouchableOpacity>
-            )}
-          </View>
-          {showFechamentoPicker && (
-            <DateTimePicker
-              value={dataFechamento || new Date()}
-              mode="date"
-              display="default"
-              onChange={onFechamentoChange}
-            />
-          )}
-
-          <Text style={styles.label}>Responsável</Text>
-          <View style={styles.inputContainer}>
-            <Picker
-              selectedValue={responsible}
-              onValueChange={setResponsible}
-              style={styles.picker}
-            >
-              <Picker.Item label="Selecione o responsável..." value="" />
-              {usuarios.map((user) => (
-                <Picker.Item key={user._id} label={user.nome || user.email} value={user._id} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Vítima</Text>
-          <View style={styles.inputContainer}>
-            <Picker
-              selectedValue={victim}
-              onValueChange={setVictim}
-              style={styles.picker}
-            >
-              <Picker.Item label="Selecione a vítima..." value="" />
-              {vitimas.map((v) => (
-                <Picker.Item key={v._id} label={v.nome || v._id} value={v._id} />
-              ))}
-            </Picker>
-          </View>
-          <Text style={{textAlign:'center', color:'#888', marginBottom:10}}>Ou crie uma nova vítima abaixo:</Text>
-          <TouchableOpacity 
-            style={styles.createVictimButton}
-            onPress={() => setModalVisible(true)}
-          >
-            <Text style={styles.createVictimButtonText}>Criar vítima</Text>
-          </TouchableOpacity>
-
-          {error ? (
-            <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
-          ) : null}
-          {success ? (
-            <Text style={{ color: 'green', textAlign: 'center', marginBottom: 10 }}>{success}</Text>
-          ) : null}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.createButton, loading && styles.disabledButton]} 
-              onPress={handleCreateCase} 
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.cancelButton}
-              onPress={handleCancel}
-            >
-              <Text style={styles.buttonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ModalVitima 
-            visible={modalVisible}
-            onClose={() => setModalVisible(false)}
-            onSave={handleSaveVitima}
-          />
-        </View>
-      </ScrollView>
+      <ModalVitima 
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSaveVitima}
+      />
 
       {/* Modal de Feedback */}
       <Modal
@@ -382,7 +468,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 300,
   },
   formContainer: {
     flex: 1,
@@ -579,5 +665,66 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  victimSearchContainer: {
+    position: 'relative',
+    marginBottom: 15,
+  },
+  victimInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  victimSearchInput: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 10,
+    fontSize: 16,
+  },
+  victimSearchInputDisabled: {
+    backgroundColor: '#f5f5f5',
+  },
+  clearVictimButton: {
+    padding: 10,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    maxHeight: 200,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  victimSuggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  victimSuggestionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  victimSuggestionId: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
 });

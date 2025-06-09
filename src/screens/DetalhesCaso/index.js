@@ -42,6 +42,7 @@ export default function DetalhesCaso({ route, navigation }) {
   const [showDeleteCaseWarning, setShowDeleteCaseWarning] = useState(false);
   const [deleteCountdown, setDeleteCountdown] = useState(5);
   const [canDelete, setCanDelete] = useState(false);
+  const [responsibleName, setResponsibleName] = useState('');
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -53,6 +54,19 @@ export default function DetalhesCaso({ route, navigation }) {
     try {
       const response = await api.get(`/api/cases/${caso._id}`);
       setCasoDetalhado(response.data);
+      
+      // Buscar nome do responsável
+      if (response.data.responsible) {
+        try {
+          const userResponse = await api.get(`/api/users/${response.data.responsible}`);
+          setResponsibleName(userResponse.data.nome || userResponse.data.email || 'Responsável não encontrado');
+        } catch (err) {
+          console.error("Erro ao buscar responsável:", err);
+          setResponsibleName('Responsável não encontrado');
+        }
+      } else {
+        setResponsibleName('Não atribuído');
+      }
     } catch (err) {
       setError("Erro ao carregar detalhes do caso");
       console.error("Erro ao buscar detalhes do caso:", err);
@@ -356,9 +370,7 @@ export default function DetalhesCaso({ route, navigation }) {
 
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Responsável</Text>
-          <Text style={styles.infoValue}>
-            {typeof caso.responsible === 'object' ? caso.responsible.name : caso.responsible || "Não atribuído"}
-          </Text>
+          <Text style={styles.infoValue}>{responsibleName}</Text>
         </View>
 
         <View style={styles.infoItem}>
