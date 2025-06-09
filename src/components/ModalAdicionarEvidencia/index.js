@@ -93,7 +93,7 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
     <Modal
       visible={visible}
       transparent={true}
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>

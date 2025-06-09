@@ -25,7 +25,7 @@ export default function ModalDetalhesVitima({ visible, onClose, vitima }) {
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}

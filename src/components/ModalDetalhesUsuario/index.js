@@ -12,7 +12,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 export default function ModalDetalhesUsuario({ visible, onClose, usuario }) {
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
