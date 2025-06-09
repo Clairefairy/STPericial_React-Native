@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,58 +6,131 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import ModalEditarUsuario from "../ModalEditarUsuario";
+import api from "../../services/api";
 
-export default function ModalDetalhesUsuario({ visible, onClose, usuario }) {
+export default function ModalDetalhesUsuario({ visible, onClose, usuario, onUpdate }) {
+  const [modalEditarVisible, setModalEditarVisible] = useState(false);
+
+  const formatRole = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'perito':
+        return 'Perito';
+      case 'assistente':
+        return 'Assistente';
+      default:
+        return 'Não definido';
+    }
+  };
+
+  const handleEditar = async (usuarioData) => {
+    try {
+      await api.put(`/api/users/${usuario._id}`, usuarioData);
+      setModalEditarVisible(false);
+      onUpdate(); // Atualiza a lista de usuários
+      Alert.alert('Sucesso', 'Usuário atualizado com sucesso!');
+    } catch (err) {
+      console.error("Erro ao editar usuário:", err);
+      Alert.alert('Erro', 'Não foi possível editar o usuário. Tente novamente.');
+    }
+  };
+
+  const handleExcluir = () => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Tem certeza que deseja excluir este usuário?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/users/${usuario._id}`);
+              onClose();
+              onUpdate(); // Atualiza a lista de usuários
+              Alert.alert('Sucesso', 'Usuário excluído com sucesso!');
+            } catch (err) {
+              console.error("Erro ao excluir usuário:", err);
+              Alert.alert('Erro', 'Não foi possível excluir o usuário. Tente novamente.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Detalhes do Usuário</Text>
-          
-          <ScrollView style={styles.modalScroll}>
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Nome Completo</Text>
-              <Text style={styles.value}>{usuario?.nome || "Não informado"}</Text>
-            </View>
+    <>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Detalhes do Usuário</Text>
+            
+            <ScrollView style={styles.modalScroll}>
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Nome Completo</Text>
+                <Text style={styles.value}>{usuario?.name || "Não informado"}</Text>
+              </View>
 
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{usuario?.email || "Não informado"}</Text>
-            </View>
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Email</Text>
+                <Text style={styles.value}>{usuario?.email || "Não informado"}</Text>
+              </View>
 
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Tipo</Text>
-              <Text style={styles.value}>{usuario?.tipo || "Não informado"}</Text>
-            </View>
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Tipo</Text>
+                <Text style={styles.value}>{formatRole(usuario?.role)}</Text>
+              </View>
 
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={[styles.button, styles.editButton]}>
-                <Icon name="edit" size={24} color="#fff" />
-                <Text style={styles.buttonText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.deleteButton]}>
-                <Icon name="delete" size={24} color="#fff" />
-                <Text style={styles.buttonText}>Excluir</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity 
+                  style={[styles.button, styles.editButton]}
+                  onPress={() => setModalEditarVisible(true)}
+                >
+                  <Icon name="edit" size={24} color="#fff" />
+                  <Text style={styles.buttonText}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.button, styles.deleteButton]}
+                  onPress={handleExcluir}
+                >
+                  <Icon name="delete" size={24} color="#fff" />
+                  <Text style={styles.buttonText}>Excluir</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
 
-          <TouchableOpacity 
-            style={[styles.button, styles.closeButton]}
-            onPress={onClose}
-          >
-            <Text style={styles.buttonText}>Fechar</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.closeButton]}
+              onPress={onClose}
+            >
+              <Text style={styles.buttonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      <ModalEditarUsuario
+        visible={modalEditarVisible}
+        onClose={() => setModalEditarVisible(false)}
+        onSave={handleEditar}
+        usuario={usuario}
+      />
+    </>
   );
 }
 

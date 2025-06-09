@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Picker } from '@react-native-picker/picker';
 
-export default function ModalCadastrarUsuario({ visible, onClose, onSave }) {
+export default function ModalEditarUsuario({ visible, onClose, onSave, usuario }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -19,41 +19,49 @@ export default function ModalCadastrarUsuario({ visible, onClose, onSave }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleCriarUsuario = () => {
+  useEffect(() => {
+    if (usuario) {
+      setName(usuario.name || '');
+      setEmail(usuario.email || '');
+      setRole(usuario.role || '');
+      setPassword('');
+      setConfirmPassword('');
+      setError('');
+    }
+  }, [usuario]);
+
+  const handleEditarUsuario = () => {
     // Limpa erro anterior
     setError('');
 
     // Validação de campos obrigatórios
-    if (!name || !email || !role || !password || !confirmPassword) {
-      setError('Todos os campos são obrigatórios');
+    if (!name || !email || !role) {
+      setError('Nome, email e tipo são obrigatórios');
       return;
     }
 
-    // Validação de senha
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem');
-      return;
-    }
-
-    // Validação de tamanho mínimo da senha
-    if (password.length < 6) {
-      setError('A senha deve ter no mínimo 6 caracteres');
-      return;
+    // Se a senha foi preenchida, valida
+    if (password || confirmPassword) {
+      if (password !== confirmPassword) {
+        setError('As senhas não coincidem');
+        return;
+      }
+      if (password.length < 6) {
+        setError('A senha deve ter no mínimo 6 caracteres');
+        return;
+      }
     }
 
     const usuarioData = {
       name,
       email,
       role,
-      password,
+      ...(password && { password }), // Só inclui a senha se foi preenchida
     };
     
     onSave(usuarioData);
     
-    // Limpar os campos após criar
-    setName('');
-    setEmail('');
-    setRole('');
+    // Limpar os campos após editar
     setPassword('');
     setConfirmPassword('');
     setError('');
@@ -68,7 +76,7 @@ export default function ModalCadastrarUsuario({ visible, onClose, onSave }) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Cadastrar Novo Usuário</Text>
+          <Text style={styles.modalTitle}>Editar Usuário</Text>
           
           <ScrollView style={styles.modalScroll}>
             {error ? (
@@ -107,19 +115,19 @@ export default function ModalCadastrarUsuario({ visible, onClose, onSave }) {
               </Picker>
             </View>
 
-            <Text style={styles.label}>Senha</Text>
+            <Text style={styles.label}>Nova Senha (opcional)</Text>
             <TextInput
               style={styles.input}
-              placeholder="Digite a senha..."
+              placeholder="Digite a nova senha..."
               secureTextEntry
               value={password}
               onChangeText={setPassword}
             />
 
-            <Text style={styles.label}>Confirmar Senha</Text>
+            <Text style={styles.label}>Confirmar Nova Senha</Text>
             <TextInput
               style={styles.input}
-              placeholder="Confirme a senha..."
+              placeholder="Confirme a nova senha..."
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -128,9 +136,9 @@ export default function ModalCadastrarUsuario({ visible, onClose, onSave }) {
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.createButton]}
-                onPress={handleCriarUsuario}
+                onPress={handleEditarUsuario}
               >
-                <Text style={styles.buttonText}>Criar</Text>
+                <Text style={styles.buttonText}>Salvar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]}

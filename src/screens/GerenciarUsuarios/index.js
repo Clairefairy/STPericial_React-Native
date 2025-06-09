@@ -1,58 +1,87 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ModalCadastrarUsuario from "../../components/ModalCadastrarUsuario";
 import ModalDetalhesUsuario from "../../components/ModalDetalhesUsuario";
+import api from "../../services/api";
 
 export default function GerenciarUsuarios() {
   const [modalCadastroVisible, setModalCadastroVisible] = useState(false);
   const [modalDetalhesVisible, setModalDetalhesVisible] = useState(false);
   const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dados de exemplo para a tabela
-  const usuarios = [
-    {
-      id: 1,
-      nome: "Administrador",
-      email: "admin@stpericial.com",
-      tipo: "Admin",
-    },
-    {
-      id: 2,
-      nome: "João Silva",
-      email: "perito.joao@stpericial.com",
-      tipo: "Perito",
-    },
-    {
-      id: 3,
-      nome: "Maria Santos",
-      email: "assistente.maria@stpericial.com",
-      tipo: "Assistente",
-    },
-    {
-      id: 4,
-      nome: "Pedro Oliveira",
-      email: "perito.pedro@stpericial.com",
-      tipo: "Perito",
-    },
-  ];
+  const fetchUsuarios = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/users');
+      setUsuarios(response.data);
+      setError(null);
+    } catch (err) {
+      setError("Erro ao carregar usuários");
+      console.error("Erro ao buscar usuários:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleSaveUsuario = (usuarioData) => {
-    // Aqui você implementará a lógica para salvar o usuário
-    console.log('Dados do usuário:', usuarioData);
-    setModalCadastroVisible(false);
+  useEffect(() => {
+    fetchUsuarios();
+  }, []);
+
+  const handleSaveUsuario = async (usuarioData) => {
+    try {
+      await api.post('/api/users', usuarioData);
+      await fetchUsuarios(); // Recarrega a lista após cadastrar
+      setModalCadastroVisible(false);
+    } catch (err) {
+      console.error("Erro ao cadastrar usuário:", err);
+      setError("Erro ao cadastrar usuário");
+    }
   };
 
   const handleOpenDetalhes = (usuario) => {
     setUsuarioSelecionado(usuario);
     setModalDetalhesVisible(true);
   };
+
+  const formatRole = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'perito':
+        return 'Perito';
+      case 'assistente':
+        return 'Assistente';
+      default:
+        return 'Não definido';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#357bd2" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -77,9 +106,9 @@ export default function GerenciarUsuarios() {
 
         {/* Linhas da tabela */}
         {usuarios.map((usuario) => (
-          <View key={usuario.id} style={styles.tableRow}>
+          <View key={usuario._id} style={styles.tableRow}>
             <Text style={[styles.cell, styles.emailCell]}>{usuario.email}</Text>
-            <Text style={styles.cell}>{usuario.tipo}</Text>
+            <Text style={styles.cell}>{formatRole(usuario.role)}</Text>
             <View style={styles.actionsCell}>
               <TouchableOpacity 
                 style={styles.actionButton}
@@ -102,6 +131,7 @@ export default function GerenciarUsuarios() {
         visible={modalDetalhesVisible}
         onClose={() => setModalDetalhesVisible(false)}
         usuario={usuarioSelecionado}
+        onUpdate={fetchUsuarios}
       />
     </ScrollView>
   );
@@ -183,5 +213,14 @@ const styles = StyleSheet.create({
     padding: 5,
     minWidth: 40,
     alignItems: "center",
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 16,
+    textAlign: "center",
   },
 }); 
