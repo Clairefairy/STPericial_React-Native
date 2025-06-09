@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -122,9 +123,20 @@ export default function Laudos() {
     }
   };
 
-  const handleDownload = () => {
-    // Implementar lógica de download
-    console.log('Download do laudo:', selectedLaudo._id);
+  const handleDownload = async () => {
+    try {
+      const response = await api.get(`/api/reports/${selectedLaudo._id}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      // Aqui você precisará implementar a lógica para salvar o PDF no dispositivo
+      // Isso pode variar dependendo da plataforma (iOS/Android)
+      // Por enquanto, vamos apenas mostrar uma mensagem de sucesso
+      Alert.alert('Sucesso', 'Laudo baixado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao baixar laudo:', err);
+      Alert.alert('Erro', 'Não foi possível baixar o laudo. Tente novamente.');
+    }
   };
 
   const handleExcluir = async () => {

@@ -49,6 +49,7 @@ export default function DetalhesCaso({ route, navigation }) {
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   const [selectedLaudoId, setSelectedLaudoId] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [showDeleteLaudoConfirm, setShowDeleteLaudoConfirm] = useState(false);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -236,6 +237,17 @@ export default function DetalhesCaso({ route, navigation }) {
     }
   };
 
+  const handleDeleteLaudo = async (laudoId) => {
+    try {
+      await api.delete(`/api/reports/${laudoId}`);
+      await fetchLaudos();
+      Alert.alert('Sucesso', 'Laudo excluído com sucesso!');
+    } catch (err) {
+      console.error("Erro ao excluir laudo:", err);
+      Alert.alert('Erro', 'Não foi possível excluir o laudo. Tente novamente.');
+    }
+  };
+
   const handleEditEvidencia = (evidencia) => {
     setSelectedEvidencia(evidencia);
     setEditText(evidencia.text || '');
@@ -331,16 +343,28 @@ export default function DetalhesCaso({ route, navigation }) {
           
           <View style={styles.evidenciaActions}>
             {laudo ? (
-              <TouchableOpacity
-                style={styles.gerarLaudoButton}
-                onPress={() => {
-                  setSelectedLaudoId(laudo._id);
-                  setShowDownloadConfirm(true);
-                }}
-              >
-                <Feather name="download" size={20} color="#357bd2" />
-                <Text style={styles.gerarLaudoText}>Baixar Laudo</Text>
-              </TouchableOpacity>
+              <View style={styles.laudoActions}>
+                <TouchableOpacity
+                  style={styles.gerarLaudoButton}
+                  onPress={() => {
+                    setSelectedLaudoId(laudo._id);
+                    setShowDownloadConfirm(true);
+                  }}
+                >
+                  <Feather name="download" size={20} color="#357bd2" />
+                  <Text style={styles.gerarLaudoText}>Baixar Laudo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.gerarLaudoButton, styles.deleteLaudoButton]}
+                  onPress={() => {
+                    setSelectedLaudoId(laudo._id);
+                    setShowDeleteLaudoConfirm(true);
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#ff4444" />
+                  <Text style={[styles.gerarLaudoText, styles.deleteLaudoText]}>Excluir Laudo</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <TouchableOpacity
                 style={styles.gerarLaudoButton}
@@ -795,6 +819,38 @@ export default function DetalhesCaso({ route, navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Confirmação de Exclusão de Laudo */}
+      <Modal
+        visible={showDeleteLaudoConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Tem certeza que deseja excluir este laudo?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowDeleteLaudoConfirm(false)}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={() => {
+                  setShowDeleteLaudoConfirm(false);
+                  handleDeleteLaudo(selectedLaudoId);
+                }}
+              >
+                <Text style={styles.popupButtonText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1181,5 +1237,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '500',
+  },
+  laudoActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  deleteLaudoButton: {
+    borderColor: '#ff4444',
+  },
+  deleteLaudoText: {
+    color: '#ff4444',
   },
 }); 
