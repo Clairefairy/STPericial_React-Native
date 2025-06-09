@@ -6,15 +6,21 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import ModalAdicionarEvidencia from '../../components/ModalAdicionarEvidencia';
 
 export default function DetalhesCaso({ route }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [selectedEvidenciaId, setSelectedEvidenciaId] = useState(null);
+  const [isFavorito, setIsFavorito] = useState(false);
   // Dados de exemplo (posteriormente virão da API)
   const caso = {
     id: "CASE-001",
@@ -81,6 +87,24 @@ export default function DetalhesCaso({ route }) {
     }
   };
 
+  const handleGerarLaudo = (evidenciaId) => {
+    setSelectedEvidenciaId(evidenciaId);
+    setShowConfirmPopup(true);
+  };
+
+  const handleConfirmarGeracao = () => {
+    setShowConfirmPopup(false);
+    setShowSuccessPopup(true);
+  };
+
+  const handleFecharSuccess = () => {
+    setShowSuccessPopup(false);
+  };
+
+  const toggleFavorito = () => {
+    setIsFavorito(!isFavorito);
+  };
+
   const renderEvidenciaCard = (evidencia) => {
     return (
       <View key={evidencia.id} style={styles.evidenciaCard}>
@@ -99,12 +123,22 @@ export default function DetalhesCaso({ route }) {
           <Text style={styles.evidenciaColetor}>Coletado por: {evidencia.coletadoPor}</Text>
           
           <View style={styles.evidenciaActions}>
-            <TouchableOpacity style={[styles.actionButton, styles.editButton]}>
-              <Feather name="edit-2" size={20} color="#87c05e" />
+            <TouchableOpacity
+              style={styles.gerarLaudoButton}
+              onPress={() => handleGerarLaudo(evidencia.id)}
+            >
+              <Feather name="file-text" size={20} color="#357bd2" />
+              <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
-              <Feather name="trash-2" size={20} color="#ff4444" />
-            </TouchableOpacity>
+
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={[styles.actionButton, styles.editButton]}>
+                <Feather name="edit-2" size={20} color="#87c05e" />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+                <Feather name="trash-2" size={20} color="#ff4444" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -122,7 +156,19 @@ export default function DetalhesCaso({ route }) {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
     >
-      <Text style={styles.casoId}>{caso.id}</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.casoId}>{caso.id}</Text>
+        <TouchableOpacity
+          style={styles.favoritoButton}
+          onPress={toggleFavorito}
+        >
+          <AntDesign 
+            name={isFavorito ? "star" : "staro"} 
+            size={24} 
+            color={isFavorito ? "#FFD700" : "#666"} 
+          />
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.tipoContainer}>
         <Text style={styles.tipo}>{caso.tipo}</Text>
@@ -191,6 +237,54 @@ export default function DetalhesCaso({ route }) {
         onClose={() => setModalVisible(false)}
         onSave={handleSaveEvidencias}
       />
+
+      {/* Popup de Confirmação */}
+      <Modal
+        visible={showConfirmPopup}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Confirma geração de laudo para Evidência {selectedEvidenciaId}?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleConfirmarGeracao}
+              >
+                <Text style={styles.buttonText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowConfirmPopup(false)}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Popup de Sucesso */}
+      <Modal
+        visible={showSuccessPopup}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>Laudo gerado com sucesso!</Text>
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={handleFecharSuccess}
+            >
+              <Text style={styles.buttonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -346,8 +440,27 @@ const styles = StyleSheet.create({
   },
   evidenciaActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  gerarLaudoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#357bd2',
+    borderRadius: 8,
+    padding: 8,
+    gap: 8,
+  },
+  gerarLaudoText: {
+    color: '#357bd2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
     gap: 10,
   },
   actionButton: {
@@ -361,5 +474,56 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     borderColor: '#ff4444',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popupContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  popupText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  popupButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  popupButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  confirmButton: {
+    backgroundColor: '#87c05e',
+  },
+  cancelButton: {
+    backgroundColor: '#ff4444',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  favoritoButton: {
+    padding: 8,
   },
 }); 
