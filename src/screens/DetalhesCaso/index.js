@@ -276,12 +276,24 @@ export default function DetalhesCaso({ route }) {
         <View style={styles.modalOverlay}>
           <View style={styles.popupContent}>
             <Text style={styles.popupText}>Laudo gerado com sucesso!</Text>
-            <TouchableOpacity
-              style={[styles.popupButton, styles.confirmButton]}
-              onPress={handleFecharSuccess}
-            >
-              <Text style={styles.buttonText}>OK</Text>
-            </TouchableOpacity>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleFecharSuccess}
+              >
+                <Text style={styles.buttonText}>OK</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.downloadButton]}
+                onPress={() => {
+                  // Aqui você implementará a lógica de download
+                  console.log('Download do laudo');
+                }}
+              >
+                <FontAwesome5 name="download" size={16} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.buttonText}>Baixar Laudo</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -505,12 +517,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minWidth: 100,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   confirmButton: {
     backgroundColor: '#87c05e',
   },
   cancelButton: {
     backgroundColor: '#ff4444',
+  },
+  downloadButton: {
+    backgroundColor: '#357bd2',
   },
   buttonText: {
     color: '#fff',
