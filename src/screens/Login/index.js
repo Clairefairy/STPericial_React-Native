@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  Switch,
 } from "react-native";
 import api from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,13 +25,15 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Verifica se existe token ao carregar a tela
   useEffect(() => {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
-        if (token) {
+        const rememberMeValue = await AsyncStorage.getItem('rememberMe');
+        if (token && rememberMeValue === 'true') {
           navigation.navigate("MainApp");
         }
       } catch (error) {
@@ -54,6 +57,8 @@ export default function Login() {
       if (response.status === 200 && data.token) {
         // Salva o token JWT no AsyncStorage
         await AsyncStorage.setItem('token', data.token);
+        // Salva a preferência "Lembrar de mim"
+        await AsyncStorage.setItem('rememberMe', rememberMe.toString());
         navigation.navigate("MainApp");
       } else {
         setError(data.message || "Email ou senha inválidos");
@@ -121,6 +126,15 @@ export default function Login() {
             secureTextEntry={true}
             value={password}
             onChangeText={setPassword}
+          />
+        </View>
+        <View style={styles.rememberMeContainer}>
+          <Text style={styles.rememberMeText}>Lembrar de mim</Text>
+          <Switch
+            value={rememberMe}
+            onValueChange={setRememberMe}
+            trackColor={{ false: "#767577", true: "#87c05e" }}
+            thumbColor={rememberMe ? "#357bd2" : "#f4f3f4"}
           />
         </View>
         {error ? (
@@ -254,5 +268,16 @@ const styles = StyleSheet.create({
     width: "60%",
     height: 150,
     resizeMode: "contain",
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  rememberMeText: {
+    color: '#000',
+    fontSize: 16,
   },
 });

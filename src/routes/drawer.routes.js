@@ -3,7 +3,7 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome6, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { View, Image, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Image, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Dashboard from "../screens/Dashboard";
@@ -32,6 +32,25 @@ export default function DrawerRoutes() {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
+  };
+
+  const confirmLogout = () => {
+    Alert.alert(
+      "Sair",
+      "Tem certeza que deseja sair?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Sair",
+          onPress: handleLogout,
+          style: "destructive"
+        }
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -128,7 +147,7 @@ export default function DrawerRoutes() {
         listeners={{
           drawerItemPress: (e) => {
             e.preventDefault();
-            handleLogout();
+            confirmLogout();
           },
         }}
       />

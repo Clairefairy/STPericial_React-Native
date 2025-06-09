@@ -5,10 +5,26 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import * as Animatable from "react-native-animatable";
 // NAVEGAÇÃO PARA A TELA DE LOGIN
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Bemvindo() {
   // FUNÇÃO PARA NAVEGAR PARA A TELA DE LOGIN "Botão Acessar"
   const navigation = useNavigation();
+
+  const handleAcessar = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const rememberMe = await AsyncStorage.getItem('rememberMe');
+      if (token && rememberMe === 'true') {
+        navigation.navigate("MainApp");
+      } else {
+        navigation.navigate("Login");
+      }
+    } catch (error) {
+      console.error('Erro ao verificar login:', error);
+      navigation.navigate("Login");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -32,11 +48,11 @@ export default function Bemvindo() {
           Gestão eficiente e segura de laudos periciais
         </Text>
         <Text style={styles.text}> Faça o login para acessar</Text>
-        <TouchableOpacity style={styles.button}>
-          <Text
-            onPress={() => navigation.navigate("Login")} // NAVEGAÇÃO PARA A TELA DE LOGIN
-            style={styles.buttonText}
-          >
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={handleAcessar}
+        >
+          <Text style={styles.buttonText}>
             Acessar
           </Text>
         </TouchableOpacity>
