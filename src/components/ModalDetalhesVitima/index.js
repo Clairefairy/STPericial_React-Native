@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,96 +6,163 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import api from "../../services/api";
+import ModalEditarVitima from "../ModalEditarVitima";
 
-export default function ModalDetalhesVitima({ visible, onClose, vitima }) {
+export default function ModalDetalhesVitima({ visible, onClose, vitima, onDelete, onEdit }) {
+  const [modalEditarVisible, setModalEditarVisible] = useState(false);
+
   const getSexoLabel = (sexo) => {
-    switch (sexo) {
-      case "M":
+    switch (sexo?.toLowerCase()) {
+      case "masculino":
         return "Masculino";
-      case "F":
+      case "feminino":
         return "Feminino";
-      case "O":
+      case "outro":
         return "Outro";
       default:
-        return sexo;
+        return sexo || "Não informado";
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "Não informado";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Confirmar Exclusão",
+      "Tem certeza que deseja excluir esta vítima? Esta ação não pode ser desfeita.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/api/victims/${vitima._id}`);
+              onDelete();
+              onClose();
+            } catch (error) {
+              console.error('Erro ao excluir vítima:', error);
+              Alert.alert('Erro', 'Não foi possível excluir a vítima. Tente novamente.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    setModalEditarVisible(true);
+  };
+
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Detalhes da Vítima</Text>
-          
-          <ScrollView style={styles.modalScroll}>
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Nome</Text>
-              <Text style={styles.value}>{vitima?.nome || "Não informado"}</Text>
-            </View>
-
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Sexo</Text>
-              <Text style={styles.value}>{getSexoLabel(vitima?.sexo) || "Não informado"}</Text>
-            </View>
-
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Etnia</Text>
-              <Text style={styles.value}>{vitima?.etnia || "Não informado"}</Text>
-            </View>
-
-            <View style={styles.infoSection}>
-              <Text style={styles.label}>Identificação</Text>
-              <View style={styles.identificacaoContainer}>
-                <Text style={styles.value}>
-                  {vitima?.identificada ? "Identificada" : "Não Identificada"}
-                </Text>
-                {vitima?.identificada ? (
-                  <Icon name="check-circle" size={24} color="#87c05e" />
-                ) : (
-                  <Icon name="cancel" size={24} color="#ff0000" />
-                )}
-              </View>
-            </View>
-
-            {vitima?.identificacao && (
+    <>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Detalhes da Vítima</Text>
+            
+            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.scrollContent}>
               <View style={styles.infoSection}>
-                <Text style={styles.label}>Número de Identificação</Text>
-                <Text style={styles.value}>{vitima.identificacao}</Text>
+                <Text style={styles.label}>Nome</Text>
+                <Text style={styles.value}>{vitima?.name || "Não informado"}</Text>
               </View>
-            )}
 
-            {vitima?.observacoes && (
               <View style={styles.infoSection}>
-                <Text style={styles.label}>Observações</Text>
-                <Text style={styles.value}>{vitima.observacoes}</Text>
+                <Text style={styles.label}>Sexo</Text>
+                <Text style={styles.value}>{getSexoLabel(vitima?.sex)}</Text>
               </View>
-            )}
-          </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, styles.editButton]}>
-              <Icon name="edit" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Editar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.deleteButton]}>
-              <Icon name="delete" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Excluir</Text>
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Etnia</Text>
+                <Text style={styles.value}>{vitima?.ethnicity || "Não informado"}</Text>
+              </View>
+
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Data de Nascimento</Text>
+                <Text style={styles.value}>{formatDate(vitima?.dateBirth)}</Text>
+              </View>
+
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Idade</Text>
+                <Text style={styles.value}>{vitima?.age ? `${vitima.age} anos` : "Não informado"}</Text>
+              </View>
+
+              <View style={styles.infoSection}>
+                <Text style={styles.label}>Identificação</Text>
+                <View style={styles.identificacaoContainer}>
+                  <Text style={styles.value}>
+                    {vitima?.identified ? "Identificada" : "Não Identificada"}
+                  </Text>
+                  {vitima?.identified ? (
+                    <Icon name="check-circle" size={24} color="#87c05e" />
+                  ) : (
+                    <Icon name="cancel" size={24} color="#ff0000" />
+                  )}
+                </View>
+              </View>
+
+              {vitima?.identification && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.label}>Número de Identificação</Text>
+                  <Text style={styles.value}>{vitima.identification}</Text>
+                </View>
+              )}
+
+              {vitima?.observations && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.label}>Observações</Text>
+                  <Text style={styles.value}>{vitima.observations}</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={[styles.button, styles.editButton]}
+                onPress={handleEdit}
+              >
+                <Icon name="edit" size={24} color="#fff" />
+                <Text style={styles.buttonText}>Editar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.button, styles.deleteButton]}
+                onPress={handleDelete}
+              >
+                <Icon name="delete" size={24} color="#fff" />
+                <Text style={styles.buttonText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>Fechar</Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Fechar</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      <ModalEditarVitima
+        visible={modalEditarVisible}
+        onClose={() => setModalEditarVisible(false)}
+        vitima={vitima}
+        onSave={onEdit}
+      />
+    </>
   );
 }
 
@@ -130,6 +197,9 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     maxHeight: "100%",
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   infoSection: {
     marginBottom: 20,

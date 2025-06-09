@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,53 +6,84 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Feather } from '@expo/vector-icons';
 import ModalVitima from '../../components/ModalVitima';
 import ModalDetalhesVitima from '../../components/ModalDetalhesVitima';
+import api from '../../services/api';
 
 export default function GerenciarVitimas() {
   const [modalCadastroVisible, setModalCadastroVisible] = useState(false);
   const [modalDetalhesVisible, setModalDetalhesVisible] = useState(false);
   const [vitimaSelecionada, setVitimaSelecionada] = useState(null);
+  const [vitimas, setVitimas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dados de exemplo (posteriormente virão da API)
-  const vitimas = [
-    {
-      id: 1,
-      nome: "João Silva",
-      sexo: "M",
-      etnia: "Branco",
-      identificado: true,
-    },
-    {
-      id: 2,
-      nome: "Maria Santos",
-      sexo: "F",
-      etnia: "Pardo",
-      identificado: true,
-    },
-    {
-      id: 3,
-      nome: "Não identificado",
-      sexo: "O",
-      etnia: "Não informado",
-      identificado: false,
-    },
-  ];
+  useEffect(() => {
+    fetchVitimas();
+  }, []);
 
-  const getSexoLabel = (sexo) => {
-    return sexo;
+  const fetchVitimas = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get('/api/victims');
+      setVitimas(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar vítimas:', error);
+      setError('Erro ao carregar vítimas. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOpenDetalhes = (vitima) => {
-    setVitimaSelecionada(vitima);
-    setModalDetalhesVisible(true);
+  const handleOpenDetalhes = async (vitima) => {
+    try {
+      const response = await api.get(`/api/victims/${vitima._id}`);
+      setVitimaSelecionada(response.data);
+      setModalDetalhesVisible(true);
+    } catch (error) {
+      console.error('Erro ao buscar detalhes da vítima:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os detalhes da vítima.');
+    }
+  };
+
+  const handleDeleteVitima = async () => {
+    await fetchVitimas();
+  };
+
+  const handleEditVitima = async () => {
+    await fetchVitimas();
+  };
+
+  const handleSaveVitima = async (novaVitima) => {
+    try {
+      await fetchVitimas(); // Atualiza a lista após criar nova vítima
+      Alert.alert('Sucesso', 'Vítima cadastrada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar lista de vítimas:', error);
+    }
+  };
+
+  const getSexoLabel = (sexo) => {
+    switch (sexo?.toLowerCase()) {
+      case 'masculino':
+        return 'M';
+      case 'feminino':
+        return 'F';
+      case 'outro':
+        return 'O';
+      default:
+        return sexo || 'N/A';
+    }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Text style={styles.title}>Gerenciamento de Vítimas</Text>
 
       <TouchableOpacity
@@ -72,43 +103,61 @@ export default function GerenciarVitimas() {
           <Text style={styles.headerCell}>Detalhes</Text>
         </View>
 
-        <ScrollView style={styles.tableBody}>
-          {vitimas.map((vitima) => (
-            <View key={vitima.id} style={styles.tableRow}>
-              <Text style={[styles.cell, styles.nomeCell]}>{vitima.nome}</Text>
-              <Text style={styles.cell}>{getSexoLabel(vitima.sexo)}</Text>
-              <Text style={styles.cell}>{vitima.etnia}</Text>
-              <View style={styles.cell}>
-                {vitima.identificado ? (
-                  <Icon name="check-circle" size={24} color="#87c05e" />
-                ) : (
-                  <Icon name="cancel" size={24} color="#ff4444" />
-                )}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#357bd2" />
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchVitimas}>
+              <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.tableBody}>
+            {vitimas.map((vitima) => (
+              <View key={vitima._id} style={styles.tableRow}>
+                <Text style={[styles.cell, styles.nomeCell]}>{vitima.name || 'Sem nome'}</Text>
+                <Text style={styles.cell}>{getSexoLabel(vitima.sex)}</Text>
+                <Text style={styles.cell}>{vitima.ethnicity || 'N/A'}</Text>
+                <View style={styles.cell}>
+                  {vitima.identified ? (
+                    <Icon name="check-circle" size={24} color="#87c05e" />
+                  ) : (
+                    <Icon name="cancel" size={24} color="#ff4444" />
+                  )}
+                </View>
+                <View style={styles.actionsCell}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleOpenDetalhes(vitima)}
+                  >
+                    <Icon name="assignment" size={24} color="#357bd2" />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.actionsCell}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleOpenDetalhes(vitima)}
-                >
-                  <Icon name="assignment" size={24} color="#357bd2" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
+            ))}
+          </View>
+        )}
       </View>
+
+      <View style={styles.bottomPadding} />
 
       <ModalVitima
         visible={modalCadastroVisible}
         onClose={() => setModalCadastroVisible(false)}
+        onSave={handleSaveVitima}
       />
 
       <ModalDetalhesVitima
         visible={modalDetalhesVisible}
         onClose={() => setModalDetalhesVisible(false)}
         vitima={vitimaSelecionada}
+        onDelete={handleDeleteVitima}
+        onEdit={handleEditVitima}
       />
-    </View>
+    </ScrollView>
   );
 }
 
@@ -116,6 +165,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  contentContainer: {
     padding: 20,
   },
   title: {
@@ -141,7 +192,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tableContainer: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
@@ -163,7 +213,7 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   tableBody: {
-    flex: 1,
+    minHeight: 200,
   },
   tableRow: {
     flexDirection: 'row',
@@ -186,5 +236,35 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 5,
+  },
+  loadingContainer: {
+    minHeight: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorContainer: {
+    minHeight: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  retryButton: {
+    backgroundColor: '#357bd2',
+    padding: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  bottomPadding: {
+    height: 80, // Margem para o Tab Navigator
   },
 }); 

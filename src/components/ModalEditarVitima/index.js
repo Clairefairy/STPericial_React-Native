@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
   Modal,
-  Platform,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
   Alert,
-} from "react-native";
+  Platform,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../../services/api';
 
 const SEXO_OPTIONS = [
@@ -30,7 +30,7 @@ const ETNIA_OPTIONS = [
   { label: 'Outro', value: 'outro' },
 ];
 
-export default function ModalVitima({ visible, onClose, onSave }) {
+export default function ModalEditarVitima({ visible, onClose, vitima, onSave }) {
   const [formData, setFormData] = useState({
     name: '',
     sex: '',
@@ -44,29 +44,49 @@ export default function ModalVitima({ visible, onClose, onSave }) {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (selectedDate) {
-      const hoje = new Date();
-      const idadeCalculada = hoje.getFullYear() - selectedDate.getFullYear();
-      const mesAtual = hoje.getMonth();
-      const mesNascimento = selectedDate.getMonth();
-      
-      if (mesAtual < mesNascimento || (mesAtual === mesNascimento && hoje.getDate() < selectedDate.getDate())) {
-        setFormData(prev => ({ ...prev, age: (idadeCalculada - 1).toString() }));
-      } else {
-        setFormData(prev => ({ ...prev, age: idadeCalculada.toString() }));
+    if (vitima) {
+      setFormData({
+        name: vitima.name || '',
+        sex: vitima.sex || '',
+        ethnicity: vitima.ethnicity || '',
+        dateBirth: vitima.dateBirth || '',
+        age: vitima.age?.toString() || '',
+        identified: vitima.identified || false,
+        identification: vitima.identification || '',
+        observations: vitima.observations || '',
+      });
+
+      if (vitima.dateBirth) {
+        setSelectedDate(new Date(vitima.dateBirth));
       }
     }
-  }, [selectedDate]);
+  }, [vitima]);
+
+  const handleSave = async () => {
+    try {
+      const dataToSend = {
+        ...formData,
+        age: parseInt(formData.age) || 0,
+      };
+
+      await api.put(`/api/victims/${vitima._id}`, dataToSend);
+      onSave();
+      onClose();
+      Alert.alert('Sucesso', 'Vítima atualizada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar vítima:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar a vítima. Tente novamente.');
+    }
+  };
 
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setSelectedDate(selectedDate);
       const formattedDate = selectedDate.toISOString().split('T')[0];
-      setFormData(prev => ({ ...prev, dateBirth: formattedDate }));
+      setFormData({ ...formData, dateBirth: formattedDate });
     }
   };
 
@@ -84,7 +104,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
     }
 
     // Atualiza o estado com a data formatada
-    setFormData(prev => ({ ...prev, dateBirth: formatted }));
+    setFormData({ ...formData, dateBirth: formatted });
 
     // Se tiver 8 dígitos, converte para o formato da API
     if (numbers.length === 8) {
@@ -92,62 +112,8 @@ export default function ModalVitima({ visible, onClose, onSave }) {
       const date = new Date(year, month - 1, day);
       if (!isNaN(date.getTime())) {
         setSelectedDate(date);
-        setFormData(prev => ({ ...prev, dateBirth: date.toISOString().split('T')[0] }));
+        setFormData({ ...formData, dateBirth: date.toISOString().split('T')[0] });
       }
-    }
-  };
-
-  const limparCampos = () => {
-    setFormData({
-      name: '',
-      sex: '',
-      ethnicity: '',
-      dateBirth: '',
-      age: '',
-      identified: false,
-      identification: '',
-      observations: '',
-    });
-    setSelectedDate(new Date());
-  };
-
-  const handleCriarVitima = async () => {
-    if (!formData.name || !formData.sex || !formData.ethnicity) {
-      Alert.alert('Atenção', 'Por favor, preencha todos os campos obrigatórios');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const vitimaData = {
-        ...formData,
-        age: parseInt(formData.age) || 0,
-      };
-
-      const response = await api.post('/api/victims', vitimaData);
-      
-      if (onSave) {
-        onSave(response.data);
-      }
-      
-      Alert.alert('Sucesso', 'Vítima criada com sucesso!');
-      limparCampos();
-      onClose();
-    } catch (error) {
-      console.error('Erro ao criar vítima:', error);
-      
-      let errorMessage = 'Erro ao criar vítima. Tente novamente.';
-      
-      if (error.response) {
-        errorMessage = error.response.data.message || error.response.data.error || errorMessage;
-      } else if (error.request) {
-        errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
-      }
-      
-      Alert.alert('Erro', errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -160,25 +126,25 @@ export default function ModalVitima({ visible, onClose, onSave }) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Criar Nova Vítima</Text>
+          <Text style={styles.modalTitle}>Editar Vítima</Text>
 
           <ScrollView style={styles.formContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nome *</Text>
+              <Text style={styles.label}>Nome</Text>
               <TextInput
                 style={styles.input}
                 value={formData.name}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+                onChangeText={(text) => setFormData({ ...formData, name: text })}
                 placeholder="Nome da vítima"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Sexo *</Text>
+              <Text style={styles.label}>Sexo</Text>
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={formData.sex}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, sex: value }))}
+                  onValueChange={(value) => setFormData({ ...formData, sex: value })}
                   style={styles.picker}
                 >
                   <Picker.Item label="Selecione o sexo" value="" />
@@ -194,11 +160,11 @@ export default function ModalVitima({ visible, onClose, onSave }) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Etnia *</Text>
+              <Text style={styles.label}>Etnia</Text>
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={formData.ethnicity}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, ethnicity: value }))}
+                  onValueChange={(value) => setFormData({ ...formData, ethnicity: value })}
                   style={styles.picker}
                 >
                   <Picker.Item label="Selecione a etnia" value="" />
@@ -247,7 +213,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
               <TextInput
                 style={styles.input}
                 value={formData.age}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, age: text }))}
+                onChangeText={(text) => setFormData({ ...formData, age: text })}
                 placeholder="Idade da vítima"
                 keyboardType="numeric"
               />
@@ -262,7 +228,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
                     formData.identified && styles.identificacaoButtonSelected,
                   ]}
                   onPress={() =>
-                    setFormData(prev => ({ ...prev, identified: !prev.identified }))
+                    setFormData({ ...formData, identified: !formData.identified })
                   }
                 >
                   <Text
@@ -284,7 +250,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
                   style={styles.input}
                   value={formData.identification}
                   onChangeText={(text) =>
-                    setFormData(prev => ({ ...prev, identification: text }))
+                    setFormData({ ...formData, identification: text })
                   }
                   placeholder="Número de identificação"
                 />
@@ -296,7 +262,7 @@ export default function ModalVitima({ visible, onClose, onSave }) {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={formData.observations}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, observations: text }))}
+                onChangeText={(text) => setFormData({ ...formData, observations: text })}
                 placeholder="Observações adicionais"
                 multiline
                 numberOfLines={4}
@@ -306,19 +272,11 @@ export default function ModalVitima({ visible, onClose, onSave }) {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]} 
-              onPress={onClose}
-              disabled={loading}
-            >
+            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
               <Text style={styles.buttonText}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.button, styles.saveButton, loading && styles.disabledButton]} 
-              onPress={handleCriarVitima}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
+            <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+              <Text style={styles.buttonText}>Salvar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -442,8 +400,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  disabledButton: {
-    opacity: 0.7,
   },
 }); 
