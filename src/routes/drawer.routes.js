@@ -1,7 +1,7 @@
 import React from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { FontAwesome6, FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { View, Image, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,9 +10,9 @@ import Dashboard from "../screens/Dashboard";
 import Casos from "../screens/Casos";
 import Laudos from "../screens/Laudos";
 import RegistrosOdontologicos from "../screens/RegistrosOdontologicos";
-import Vitimas from "../screens/Vitimas";
 import GerenciarUsuarios from "../screens/GerenciarUsuarios";
 import Perfil from "../screens/Perfil";
+import GerenciarVitimas from '../screens/GerenciarVitimas';
 
 import CustomHeader from "../components/CustomHeader";
 import CustomDrawerContent from "../components/CustomDrawerContent";
@@ -56,24 +56,23 @@ export default function DrawerRoutes() {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={({ navigation }) => ({
-        header: ({ route }) => {
-          if (route.name === "Sair") {
-            return null; 
-          }
-          return <CustomHeader />;
-        },
+      screenOptions={{
+        header: ({ navigation, route, options }) => (
+          <CustomHeader navigation={navigation} route={route} options={options} />
+        ),
         drawerStyle: {
           backgroundColor: "#fff",
+          width: 280,
         },
         drawerActiveTintColor: "#357bd2",
-        drawerInactiveTintColor: "#000",
-      })}
+        drawerInactiveTintColor: "#666",
+      }}
     >
       <Drawer.Screen
         name="Dashboard"
         component={Dashboard}
         options={{
+          title: "Dashboard",
           drawerIcon: ({ color }) => (
             <Icon name="dashboard" size={22} color={color} />
           ),
@@ -83,6 +82,7 @@ export default function DrawerRoutes() {
         name="Casos"
         component={Casos}
         options={{
+          title: "Casos",
           drawerIcon: ({ color }) => (
             <Icon name="folder" size={22} color={color} />
           ),
@@ -92,6 +92,7 @@ export default function DrawerRoutes() {
         name="Laudos"
         component={Laudos}
         options={{
+          title: "Laudos",
           drawerIcon: ({ color }) => (
             <Icon name="description" size={22} color={color} />
           ),
@@ -108,10 +109,10 @@ export default function DrawerRoutes() {
         }}
       />
       <Drawer.Screen
-        name="Vitimas"
-        component={Vitimas}
+        name="GerenciarVitimas"
+        component={GerenciarVitimas}
         options={{
-          title: "Vítimas",
+          title: "Gerenciar Vítimas",
           drawerIcon: ({ color }) => (
             <FontAwesome6 name="person" size={22} color={color} />
           ),
@@ -123,7 +124,7 @@ export default function DrawerRoutes() {
         options={{
           title: "Gerenciar Usuários",
           drawerIcon: ({ color }) => (
-            <Icon name="people" size={22} color={color} />
+            <FontAwesome6 name="users" size={22} color={color} />
           ),
         }}
       />
@@ -131,8 +132,9 @@ export default function DrawerRoutes() {
         name="Perfil"
         component={Perfil}
         options={{
+          title: "Perfil",
           drawerIcon: ({ color }) => (
-            <Icon name="person" size={22} color={color} />
+            <Icon name="account-circle" size={22} color={color} />
           ),
         }}
       />
@@ -140,6 +142,7 @@ export default function DrawerRoutes() {
         name="Sair"
         component={Dashboard}
         options={{
+          title: "Sair",
           drawerIcon: ({ color }) => (
             <Icon name="exit-to-app" size={22} color={color} />
           ),
