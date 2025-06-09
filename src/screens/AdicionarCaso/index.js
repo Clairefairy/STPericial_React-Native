@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Modal,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -14,8 +15,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import ModalVitima from "../../components/ModalVitima";
 import api from '../../services/api';
+import { useNavigation } from "@react-navigation/native";
 
 export default function AdicionarCaso() {
+  const navigation = useNavigation();
   const [tipo, setTipo] = useState('');
   const [status, setStatus] = useState('');
   const [dataAbertura, setDataAbertura] = useState(new Date());
@@ -40,6 +43,9 @@ export default function AdicionarCaso() {
   const [victim, setVictim] = useState('');
   const [usuarios, setUsuarios] = useState([]); // lista de responsáveis
   const [vitimas, setVitimas] = useState([]); // lista de vítimas
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const tipos = [
     "Homicídio",
@@ -87,9 +93,15 @@ export default function AdicionarCaso() {
 
   // Função para criar caso
   const handleCreateCase = async () => {
+    if (!tipo || !title || !status) {
+      setError('Por favor, preencha todos os campos obrigatórios');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
+
     try {
       // Mapeia status para o enum do backend
       let statusMapped = '';
@@ -104,31 +116,37 @@ export default function AdicionarCaso() {
         description,
         status: statusMapped,
         numberProcess,
-        openingDate: dataAbertura,
-        closingDate: dataFechamento || undefined,
+        openingDate: dataAbertura.toISOString(),
+        closingDate: dataFechamento ? dataFechamento.toISOString() : undefined,
         responsible: responsible || undefined,
         victim: victim || undefined,
       };
+
       await api.post('/api/cases', payload);
-      setSuccess('Caso criado com sucesso!');
-      // Limpa os campos
-      setTipo('');
-      setTitle('');
-      setDescription('');
-      setStatus('');
-      setNumberProcess('');
-      setDataAbertura(new Date());
-      setDataFechamento(null);
-      setResponsible('');
-      setVictim('');
+      setIsSuccess(true);
+      setFeedbackMessage('Caso criado com sucesso!');
+      setShowFeedbackModal(true);
     } catch (err) {
+      setIsSuccess(false);
       if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
+        setFeedbackMessage(err.response.data.message);
       } else {
-        setError('Erro ao criar caso');
+        setFeedbackMessage('Erro ao criar caso. Verifique os dados e tente novamente.');
       }
+      setShowFeedbackModal(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    navigation.goBack();
+  };
+
+  const handleFeedbackClose = () => {
+    setShowFeedbackModal(false);
+    if (isSuccess) {
+      navigation.goBack();
     }
   };
 
@@ -295,10 +313,17 @@ export default function AdicionarCaso() {
             <Text style={{ color: 'green', textAlign: 'center', marginBottom: 10 }}>{success}</Text>
           ) : null}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateCase} disabled={loading}>
+            <TouchableOpacity 
+              style={[styles.createButton, loading && styles.disabledButton]} 
+              onPress={handleCreateCase} 
+              disabled={loading}
+            >
               <Text style={styles.buttonText}>{loading ? 'Criando...' : 'Criar'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={handleCancel}
+            >
               <Text style={styles.buttonText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
@@ -310,6 +335,34 @@ export default function AdicionarCaso() {
           />
         </View>
       </ScrollView>
+
+      {/* Modal de Feedback */}
+      <Modal
+        visible={showFeedbackModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.feedbackModalContent}>
+            <Text style={[
+              styles.feedbackTitle,
+              { color: isSuccess ? '#87c05e' : '#ff4444' }
+            ]}>
+              {isSuccess ? 'Sucesso!' : 'Atenção!'}
+            </Text>
+            <Text style={styles.feedbackMessage}>{feedbackMessage}</Text>
+            <TouchableOpacity
+              style={[
+                styles.feedbackButton,
+                { backgroundColor: isSuccess ? '#87c05e' : '#ff4444' }
+              ]}
+              onPress={handleFeedbackClose}
+            >
+              <Text style={styles.feedbackButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -492,5 +545,39 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 30,
     minWidth: 120,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  feedbackModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  feedbackTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  feedbackMessage: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  feedbackButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  feedbackButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
