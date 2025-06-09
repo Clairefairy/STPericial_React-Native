@@ -150,7 +150,7 @@ export default function AdicionarCaso() {
   return (
     <View style={styles.mainContainer}>
       <View style={styles.headerBar} />
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.formContainer}>
           <Text style={styles.title}>Adicionar Novo Caso</Text>
 
@@ -328,6 +328,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
   formContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -335,6 +338,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     marginTop: -60,
     padding: 20,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 24,
