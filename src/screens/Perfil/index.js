@@ -127,7 +127,7 @@
 // });
 //=============================================================================
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
 
 export default function Perfil() {
   const [user] = useState({
@@ -138,7 +138,7 @@ export default function Perfil() {
   });
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.title}>Perfil do Usuário</Text>
 
       <Image
@@ -147,27 +147,30 @@ export default function Perfil() {
       />
 
       <UserCard user={user} />
-    </View>
+    </ScrollView>
   );
 }
 
 function UserCard({ user }) {
   return (
     <View style={styles.card}>
-      <InfoItem label="ID" value={user.id} />
-      <InfoItem label="Nome" value={user.nome} />
-      <InfoItem label="E-mail" value={user.email} />
-      <InfoItem label="Tipo de Usuário" value={user.tipo} />
+      <View style={styles.infoItem}>
+        <Text style={styles.label}>ID:</Text>
+        <Text style={styles.value}>{user.id}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.label}>Nome:</Text>
+        <Text style={styles.value}>{user.nome}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.label}>E-mail:</Text>
+        <Text style={styles.value}>{user.email}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.label}>Tipo:</Text>
+        <Text style={styles.value}>{user.tipo}</Text>
+      </View>
     </View>
-  );
-}
-
-function InfoItem({ label, value }) {
-  return (
-    <Text style={styles.infoItem}>
-      <Text style={styles.label}>{label}: </Text>
-      <Text style={styles.value}>{value}</Text>
-    </Text>
   );
 }
 
@@ -175,8 +178,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f7fa",
+  },
+  scrollContent: {
     alignItems: "center",
-    justifyContent: "center",
     paddingVertical: 30,
   },
   title: {
