@@ -1,52 +1,102 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Picker } from '@react-native-picker/picker';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import api from "../../services/api";
 
 export default function Casos() {
   const navigation = useNavigation();
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [responsavelFilter, setResponsavelFilter] = useState("");
   const [ordenacao, setOrdenacao] = useState("Mais recentes");
+  const [casos, setCasos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [responsaveis, setResponsaveis] = useState([]);
 
-  // Dados de exemplo para a tabela
-  const casos = [
-    {
-      id: 1,
-      titulo: "Caso de Homicídio - João Silva",
-      status: "Em andamento",
-      dataAbertura: "15/03/2024",
-    },
-    {
-      id: 2,
-      titulo: "Acidente de Trânsito - Maria Santos",
-      status: "Finalizado",
-      dataAbertura: "10/03/2024",
-    },
-    {
-      id: 3,
-      titulo: "Lesões Corporais - Pedro Oliveira",
-      status: "Arquivado",
-      dataAbertura: "05/03/2024",
-    },
-  ];
+  useEffect(() => {
+    fetchResponsaveis();
+    fetchCasos();
+  }, []);
+
+  const fetchResponsaveis = async () => {
+    try {
+      const response = await api.get('/api/users');
+      const usuarios = response.data.filter(user => 
+        user.role === 'admin' || user.role === 'perito'
+      );
+      setResponsaveis(usuarios);
+    } catch (err) {
+      console.error("Erro ao buscar responsáveis:", err);
+    }
+  };
+
+  const fetchCasos = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/cases');
+      let casosData = response.data;
+
+      // Aplicar filtros
+      if (statusFilter !== "Todos") {
+        casosData = casosData.filter(caso => caso.status === statusFilter);
+      }
+
+      if (responsavelFilter) {
+        casosData = casosData.filter(caso => caso.responsible === responsavelFilter);
+      }
+
+      // Aplicar ordenação
+      casosData.sort((a, b) => {
+        const dateA = new Date(a.openingDate);
+        const dateB = new Date(b.openingDate);
+        return ordenacao === "Mais recentes" ? dateB - dateA : dateA - dateB;
+      });
+
+      setCasos(casosData);
+      setError(null);
+    } catch (err) {
+      setError("Erro ao carregar os casos. Tente novamente mais tarde.");
+      console.error("Erro ao buscar casos:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCasos();
+  }, [statusFilter, responsavelFilter, ordenacao]);
+
+  const formatStatus = (status) => {
+    switch (status) {
+      case "em_andamento":
+        return "Em andamento";
+      case "finalizado":
+        return "Finalizado";
+      case "arquivado":
+        return "Arquivado";
+      default:
+        return status;
+    }
+  };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Em andamento":
+      case "em_andamento":
         return <MaterialCommunityIcons name="briefcase-clock" size={20} color="#FFD700" />;
-      case "Finalizado":
+      case "finalizado":
         return <MaterialCommunityIcons name="briefcase-check" size={20} color="#87c05e" />;
-      case "Arquivado":
+      case "arquivado":
         return <FontAwesome5 name="archive" size={20} color="#FFA500" />;
       default:
         return null;
@@ -56,6 +106,27 @@ export default function Casos() {
   const handleDetalhes = (caso) => {
     navigation.navigate("DetalhesCaso", { caso });
   };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#357bd2" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -72,9 +143,9 @@ export default function Casos() {
               style={styles.picker}
             >
               <Picker.Item label="Todos" value="Todos" />
-              <Picker.Item label="Arquivado" value="Arquivado" />
-              <Picker.Item label="Em andamento" value="Em andamento" />
-              <Picker.Item label="Finalizado" value="Finalizado" />
+              <Picker.Item label="Arquivado" value="arquivado" />
+              <Picker.Item label="Em andamento" value="em_andamento" />
+              <Picker.Item label="Finalizado" value="finalizado" />
             </Picker>
           </View>
         </View>
@@ -88,8 +159,13 @@ export default function Casos() {
               style={styles.picker}
             >
               <Picker.Item label="Todos" value="" />
-              <Picker.Item label="Dr. Silva" value="Dr. Silva" />
-              <Picker.Item label="Dra. Santos" value="Dra. Santos" />
+              {responsaveis.map((responsavel) => (
+                <Picker.Item 
+                  key={responsavel._id} 
+                  label={responsavel.name} 
+                  value={responsavel._id} 
+                />
+              ))}
             </Picker>
           </View>
         </View>
@@ -121,12 +197,12 @@ export default function Casos() {
 
         {/* Linhas da tabela */}
         {casos.map((caso) => (
-          <View key={caso.id} style={styles.tableRow}>
-            <Text style={[styles.cell, styles.titleCell]}>{caso.titulo}</Text>
+          <View key={caso._id} style={styles.tableRow}>
+            <Text style={[styles.cell, styles.titleCell]}>{caso.title}</Text>
             <View style={styles.cell}>
               {getStatusIcon(caso.status)}
             </View>
-            <Text style={styles.cell}>{caso.dataAbertura}</Text>
+            <Text style={styles.cell}>{formatDate(caso.openingDate)}</Text>
             <View style={styles.actionsCell}>
               <TouchableOpacity 
                 style={styles.actionButton}
@@ -181,6 +257,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     overflow: "hidden",
+    marginBottom: 100,
   },
   tableHeader: {
     flexDirection: "row",
@@ -224,5 +301,14 @@ const styles = StyleSheet.create({
     padding: 5,
     minWidth: 40,
     alignItems: "center",
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
   },
 }); 

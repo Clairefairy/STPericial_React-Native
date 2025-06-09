@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,60 +15,57 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import ModalAdicionarEvidencia from '../../components/ModalAdicionarEvidencia';
+import api from '../../services/api';
 
 export default function DetalhesCaso({ route }) {
+  const { caso } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [selectedEvidenciaId, setSelectedEvidenciaId] = useState(null);
   const [isFavorito, setIsFavorito] = useState(false);
-  // Dados de exemplo (posteriormente virão da API)
-  const caso = {
-    id: "CASE-001",
-    tipo: "Homicídio",
-    titulo: "Caso de Homicídio - João Silva",
-    status: "Em andamento",
-    descricao: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    dataAbertura: "15/03/2024",
-    dataFechamento: null,
-    responsavel: "Dr. Silva",
-    vitima: "João Silva",
-    dataCriacao: "15/03/2024 10:30",
-    ultimaAtualizacao: "16/03/2024 15:45",
-    evidencias: [
-      {
-        id: "EVD-001",
-        tipo: "imagem",
-        descricao: "Foto da cena do crime",
-        dataColeta: "15/03/2024 11:00",
-        coletadoPor: "Dr. Silva",
-        url: require('../../assets/placeholderevidencia.jpg'),
-      },
-      {
-        id: "EVD-002",
-        tipo: "documento",
-        descricao: "Relatório inicial",
-        dataColeta: "15/03/2024 12:00",
-        coletadoPor: "Dra. Santos",
-      },
-      {
-        id: "EVD-003",
-        tipo: "video",
-        descricao: "Gravação da cena",
-        dataColeta: "15/03/2024 13:00",
-        coletadoPor: "Dr. Silva",
-        url: require('../../assets/placeholderevidencia.jpg'),
-      },
-    ],
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [evidencias, setEvidencias] = useState([]);
+  const [casoDetalhado, setCasoDetalhado] = useState(null);
+
+  useEffect(() => {
+    fetchCasoDetalhado();
+    fetchEvidencias();
+  }, []);
+
+  const fetchCasoDetalhado = async () => {
+    try {
+      const response = await api.get(`/api/cases/${caso._id}`);
+      setCasoDetalhado(response.data);
+    } catch (err) {
+      setError("Erro ao carregar detalhes do caso");
+      console.error("Erro ao buscar detalhes do caso:", err);
+    }
+  };
+
+  const fetchEvidencias = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/evidences');
+      const evidenciasDoCaso = response.data.filter(evidencia => evidencia.case === caso._id);
+      setEvidencias(evidenciasDoCaso);
+      setError(null);
+    } catch (err) {
+      setError("Erro ao carregar evidências");
+      console.error("Erro ao buscar evidências:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Em andamento":
+      case "em_andamento":
         return "#FFD700";
-      case "Finalizado":
+      case "finalizado":
         return "#87c05e";
-      case "Arquivado":
+      case "arquivado":
         return "#FFA500";
       default:
         return "#ccc";
@@ -76,15 +74,34 @@ export default function DetalhesCaso({ route }) {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Em andamento":
+      case "em_andamento":
         return <MaterialCommunityIcons name="briefcase-clock" size={20} color="#FFD700" />;
-      case "Finalizado":
+      case "finalizado":
         return <MaterialCommunityIcons name="briefcase-check" size={20} color="#87c05e" />;
-      case "Arquivado":
+      case "arquivado":
         return <FontAwesome5 name="archive" size={20} color="#FFA500" />;
       default:
         return null;
     }
+  };
+
+  const formatStatus = (status) => {
+    switch (status) {
+      case "em_andamento":
+        return "Em andamento";
+      case "finalizado":
+        return "Finalizado";
+      case "arquivado":
+        return "Arquivado";
+      default:
+        return status;
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Não informado";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
   };
 
   const handleGerarLaudo = (evidenciaId) => {
@@ -107,25 +124,27 @@ export default function DetalhesCaso({ route }) {
 
   const renderEvidenciaCard = (evidencia) => {
     return (
-      <View key={evidencia.id} style={styles.evidenciaCard}>
-        {(evidencia.tipo === 'imagem' || evidencia.tipo === 'video') && (
+      <View key={evidencia._id} style={styles.evidenciaCard}>
+        {(evidencia.type === 'imagem' || evidencia.type === 'video') && evidencia.fileUrl && (
           <Image
-            source={evidencia.url}
+            source={{ uri: evidencia.fileUrl }}
             style={styles.evidenciaPreview}
             resizeMode="cover"
           />
         )}
         <View style={styles.evidenciaInfo}>
-          <Text style={styles.evidenciaId}>{evidencia.id}</Text>
-          <Text style={styles.evidenciaTipo}>Tipo: {evidencia.tipo}</Text>
-          <Text style={styles.evidenciaDescricao}>{evidencia.descricao}</Text>
-          <Text style={styles.evidenciaData}>Data de coleta: {evidencia.dataColeta}</Text>
-          <Text style={styles.evidenciaColetor}>Coletado por: {evidencia.coletadoPor}</Text>
+          <Text style={styles.evidenciaId}>Evidência #{evidencia._id}</Text>
+          <Text style={styles.evidenciaTipo}>Tipo: {evidencia.type || "Não especificado"}</Text>
+          <Text style={styles.evidenciaDescricao}>{evidencia.text || "Sem descrição"}</Text>
+          <Text style={styles.evidenciaData}>Data de coleta: {formatDate(evidencia.collectionDate)}</Text>
+          <Text style={styles.evidenciaColetor}>
+            Coletado por: {typeof evidencia.collectedBy === 'object' ? evidencia.collectedBy.name : evidencia.collectedBy || "Não informado"}
+          </Text>
           
           <View style={styles.evidenciaActions}>
             <TouchableOpacity
               style={styles.gerarLaudoButton}
-              onPress={() => handleGerarLaudo(evidencia.id)}
+              onPress={() => handleGerarLaudo(evidencia._id)}
             >
               <Feather name="file-text" size={20} color="#357bd2" />
               <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
@@ -151,13 +170,29 @@ export default function DetalhesCaso({ route }) {
     setModalVisible(false);
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#357bd2" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView 
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
     >
       <View style={styles.headerContainer}>
-        <Text style={styles.casoId}>{caso.id}</Text>
+        <Text style={styles.casoId}>Caso #{caso._id}</Text>
         <TouchableOpacity
           style={styles.favoritoButton}
           onPress={toggleFavorito}
@@ -171,50 +206,54 @@ export default function DetalhesCaso({ route }) {
       </View>
       
       <View style={styles.tipoContainer}>
-        <Text style={styles.tipo}>{caso.tipo}</Text>
+        <Text style={styles.tipo}>{caso.type || "Não especificado"}</Text>
       </View>
 
-      <Text style={styles.titulo}>{caso.titulo}</Text>
+      <Text style={styles.titulo}>{caso.title || "Sem título"}</Text>
 
       <View style={[styles.statusContainer, { backgroundColor: getStatusColor(caso.status) }]}>
         {getStatusIcon(caso.status)}
-        <Text style={styles.status}>{caso.status}</Text>
+        <Text style={styles.status}>{formatStatus(caso.status)}</Text>
       </View>
 
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Descrição</Text>
-        <Text style={styles.descricao}>{caso.descricao}</Text>
+        <Text style={styles.descricao}>{caso.description || "Sem descrição"}</Text>
       </View>
 
       <View style={styles.infoGrid}>
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Data de Abertura</Text>
-          <Text style={styles.infoValue}>{caso.dataAbertura}</Text>
+          <Text style={styles.infoValue}>{formatDate(caso.openingDate)}</Text>
         </View>
 
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Data de Fechamento</Text>
-          <Text style={styles.infoValue}>{caso.dataFechamento || "Não informado"}</Text>
+          <Text style={styles.infoValue}>{formatDate(caso.closingDate)}</Text>
         </View>
 
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Responsável</Text>
-          <Text style={styles.infoValue}>{caso.responsavel}</Text>
+          <Text style={styles.infoValue}>
+            {typeof caso.responsible === 'object' ? caso.responsible.name : caso.responsible || "Não atribuído"}
+          </Text>
         </View>
 
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Vítima</Text>
-          <Text style={styles.infoValue}>{caso.vitima || "Sem vítima"}</Text>
+          <Text style={styles.infoValue}>
+            {typeof caso.victim === 'object' ? caso.victim.name : caso.victim || "Sem vítima"}
+          </Text>
         </View>
 
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Data de Criação</Text>
-          <Text style={styles.infoValue}>{caso.dataCriacao}</Text>
+          <Text style={styles.infoValue}>{formatDate(caso.createdAt)}</Text>
         </View>
 
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Última Atualização</Text>
-          <Text style={styles.infoValue}>{caso.ultimaAtualizacao}</Text>
+          <Text style={styles.infoValue}>{formatDate(caso.updatedAt)}</Text>
         </View>
       </View>
 
@@ -229,7 +268,11 @@ export default function DetalhesCaso({ route }) {
             <Text style={styles.addButtonText}>Adicionar evidência</Text>
           </TouchableOpacity>
         </View>
-        {caso.evidencias.map(renderEvidenciaCard)}
+        {evidencias.length > 0 ? (
+          evidencias.map(renderEvidenciaCard)
+        ) : (
+          <Text style={styles.noEvidencias}>Nenhuma evidência registrada</Text>
+        )}
       </View>
 
       <ModalAdicionarEvidencia
@@ -251,16 +294,16 @@ export default function DetalhesCaso({ route }) {
             </Text>
             <View style={styles.popupButtons}>
               <TouchableOpacity
-                style={[styles.popupButton, styles.confirmButton]}
-                onPress={handleConfirmarGeracao}
-              >
-                <Text style={styles.buttonText}>Confirmar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.popupButton, styles.cancelButton]}
                 onPress={() => setShowConfirmPopup(false)}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleConfirmarGeracao}
+              >
+                <Text style={styles.popupButtonText}>Confirmar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -275,25 +318,15 @@ export default function DetalhesCaso({ route }) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.popupContent}>
-            <Text style={styles.popupText}>Laudo gerado com sucesso!</Text>
-            <View style={styles.popupButtons}>
-              <TouchableOpacity
-                style={[styles.popupButton, styles.confirmButton]}
-                onPress={handleFecharSuccess}
-              >
-                <Text style={styles.buttonText}>OK</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.popupButton, styles.downloadButton]}
-                onPress={() => {
-                  // Aqui você implementará a lógica de download
-                  console.log('Download do laudo');
-                }}
-              >
-                <FontAwesome5 name="download" size={16} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.buttonText}>Baixar Laudo</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.popupText}>
+              Laudo gerado com sucesso!
+            </Text>
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={handleFecharSuccess}
+            >
+              <Text style={styles.popupButtonText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -526,10 +559,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#ff4444',
   },
-  downloadButton: {
-    backgroundColor: '#357bd2',
-  },
-  buttonText: {
+  popupButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
@@ -542,5 +572,20 @@ const styles = StyleSheet.create({
   },
   favoritoButton: {
     padding: 8,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  noEvidencias: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 20,
+    fontSize: 16,
   },
 }); 
