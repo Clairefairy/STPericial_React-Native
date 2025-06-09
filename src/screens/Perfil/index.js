@@ -1,176 +1,104 @@
-// import React from "react";
-// import { View, Text, StyleSheet } from "react-native";
-
-// export default function Perfil() {
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.text}>Perfil</Text>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#fff",
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   text: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     color: "#357bd2",
-//   },
-// });
-//=============================================================================
-// import React, { useState } from "react";
-// import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-
-// export default function Perfil() {
-//   const [user] = useState({
-//     id: "USR-001",
-//     nome: "João da Silva",
-//     email: "joao.silva@example.com",
-//     tipo: "Perito", // ou "Admin", "Assistente"
-//   });
-
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>Perfil do Usuário</Text>
-
-//       <Image
-//         source={require("../../assets/user-default.png")}
-//         style={styles.profileImage}
-//       />
-
-//       <View style={styles.card}>
-//         <InfoItem label="ID" value={user.id} />
-//         <InfoItem label="Nome" value={user.nome} />
-//         <InfoItem label="E-mail" value={user.email} />
-//         <InfoItem label="Tipo de Usuário" value={user.tipo} />
-//       </View>
-
-//       <TouchableOpacity style={styles.editButton}>
-//         <Text style={styles.editText}>Editar Perfil</Text>
-//       </TouchableOpacity>
-//     </View>
-//   );
-// }
-
-// function InfoItem({ label, value }) {
-//   return (
-//     <View style={styles.infoItem}>
-//       <Text style={styles.label}>{label}:</Text>
-//       <Text style={styles.value}>{value}</Text>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#f5f7fa",
-//     alignItems: "center",
-//     paddingTop: 10,
-//   },
-//   title: {
-//     fontSize: 26,
-//     fontWeight: "bold",
-//     color: "#1a2d5a",
-//     marginBottom: 10,
-//   },
-//   profileImage: {
-//     width: 100,
-//     height: 100,
-//     borderRadius: 65,
-//     borderWidth: 3,
-//     borderColor: "#357bd2",
-//     marginBottom: 5,
-//   },
-//   card: {
-//     width: "85%",
-//     backgroundColor: "#fff",
-//     borderRadius: 12,
-//     padding: 20,
-//     elevation: 4, // sombra Android
-//     shadowColor: "#000", // sombra iOS
-//     shadowOpacity: 0.1,
-//     shadowRadius: 6,
-//     shadowOffset: { width: 0, height: 2 },
-//     marginBottom: 20,
-//   },
-//   infoItem: {
-//     flexDirection: "row",
-//     marginVertical: 8,
-//   },
-//   label: {
-//     fontWeight: "600",
-//     color: "#444",
-//     width: 130,
-//   },
-//   value: {
-//     color: "#222",
-//     fontSize: 16,
-//   },
-//   editButton: {
-//     backgroundColor: "#357bd2",
-//     paddingVertical: 12,
-//     paddingHorizontal: 32,
-//     borderRadius: 10,
-//     elevation: 3,
-//   },
-//   editText: {
-//     color: "#fff",
-//     fontWeight: "bold",
-//     fontSize: 16,
-//   },
-// });
-//=============================================================================
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
+import api from "../../services/api";
 
 export default function Perfil() {
-  const [user] = useState({
-    id: "USR-001",
-    nome: "João da Silva",
-    email: "joao.silva@example.com",
-    tipo: "Perito", // ou "Admin", "Assistente"
-  });
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        const response = await api.get(`/api/users/${decoded.id}`);
+        setUser(response.data);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar dados do usuário:", err);
+      setError("Erro ao carregar dados do usuário");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRoleIcon = (role) => {
+    switch (role) {
+      case 'admin':
+        return <MaterialCommunityIcons name="shield-crown" size={80} color="#357bd2" />;
+      case 'perito':
+        return <MaterialCommunityIcons name="police-badge" size={80} color="#357bd2" />;
+      case 'assistente':
+        return <MaterialCommunityIcons name="magnify" size={80} color="#357bd2" />;
+      default:
+        return <MaterialCommunityIcons name="account" size={80} color="#357bd2" />;
+    }
+  };
+
+  const formatRole = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'perito':
+        return 'Perito';
+      case 'assistente':
+        return 'Assistente';
+      default:
+        return 'Não definido';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text>Carregando...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.title}>Perfil do Usuário</Text>
 
-      <Image
-        source={require("../../assets/user-default.png")}
-        style={styles.profileImage}
-      />
+      <View style={styles.iconContainer}>
+        {getRoleIcon(user?.role)}
+      </View>
 
-      <UserCard user={user} />
+      <View style={styles.card}>
+        <View style={styles.infoItem}>
+          <Text style={styles.label}>ID:</Text>
+          <Text style={styles.value}>{user?._id || "Não informado"}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.label}>Nome:</Text>
+          <Text style={styles.value}>{user?.name || "Não informado"}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.label}>E-mail:</Text>
+          <Text style={styles.value}>{user?.email || "Não informado"}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.label}>Tipo:</Text>
+          <Text style={styles.value}>{formatRole(user?.role)}</Text>
+        </View>
+      </View>
     </ScrollView>
-  );
-}
-
-function UserCard({ user }) {
-  return (
-    <View style={styles.card}>
-      <View style={styles.infoItem}>
-        <Text style={styles.label}>ID:</Text>
-        <Text style={styles.value}>{user.id}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.label}>Nome:</Text>
-        <Text style={styles.value}>{user.nome}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.label}>E-mail:</Text>
-        <Text style={styles.value}>{user.email}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.label}>Tipo:</Text>
-        <Text style={styles.value}>{user.tipo}</Text>
-      </View>
-    </View>
   );
 }
 
@@ -183,20 +111,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 30,
   },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   title: {
     fontSize: 26,
     fontWeight: "bold",
     color: "#1a2d5a",
-    marginBottom: -5,
-  },
-  profileImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: "#357bd2",
-    marginVertical: 15,
     marginBottom: 20,
+  },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   card: {
     width: "85%",
@@ -224,5 +161,9 @@ const styles = StyleSheet.create({
   },
   value: {
     color: "#222",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 16,
   },
 });
