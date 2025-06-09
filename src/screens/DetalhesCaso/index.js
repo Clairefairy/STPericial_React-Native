@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   TextInput,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -19,6 +20,7 @@ import ModalAdicionarEvidencia from '../../components/ModalAdicionarEvidencia';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 
 export default function DetalhesCaso({ route, navigation }) {
   const { caso } = route.params;
@@ -43,11 +45,17 @@ export default function DetalhesCaso({ route, navigation }) {
   const [deleteCountdown, setDeleteCountdown] = useState(5);
   const [canDelete, setCanDelete] = useState(false);
   const [responsibleName, setResponsibleName] = useState('');
+  const [laudos, setLaudos] = useState({});
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+  const [selectedLaudoId, setSelectedLaudoId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
     fetchCasoDetalhado();
     fetchEvidencias();
     checkFavorito();
+    fetchLaudos();
+    getCurrentUserId();
   }, []);
 
   const fetchCasoDetalhado = async () => {
@@ -85,6 +93,33 @@ export default function DetalhesCaso({ route, navigation }) {
       console.error("Erro ao buscar evidências:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLaudos = async () => {
+    try {
+      const response = await api.get('/api/reports');
+      const laudosPorEvidencia = {};
+      response.data.forEach(laudo => {
+        if (laudo.evidence) {
+          laudosPorEvidencia[laudo.evidence] = laudo;
+        }
+      });
+      setLaudos(laudosPorEvidencia);
+    } catch (err) {
+      console.error("Erro ao buscar laudos:", err);
+    }
+  };
+
+  const getCurrentUserId = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setCurrentUserId(decoded.id);
+      }
+    } catch (err) {
+      console.error("Erro ao obter ID do usuário:", err);
     }
   };
 
@@ -163,18 +198,42 @@ export default function DetalhesCaso({ route, navigation }) {
     return date.toLocaleDateString('pt-BR');
   };
 
-  const handleGerarLaudo = (evidenciaId) => {
-    setSelectedEvidenciaId(evidenciaId);
-    setShowConfirmPopup(true);
+  const handleGerarLaudo = async (evidenciaId) => {
+    try {
+      if (!currentUserId) {
+        Alert.alert('Erro', 'Usuário não identificado. Faça login novamente.');
+        return;
+      }
+
+      const response = await api.get(`/api/reports/ia/${caso._id}`, {
+        params: {
+          evidence: evidenciaId,
+          expertResponsible: currentUserId
+        }
+      });
+      
+      await fetchLaudos();
+      Alert.alert('Sucesso', 'Laudo gerado com sucesso!');
+    } catch (err) {
+      console.error("Erro ao gerar laudo:", err);
+      Alert.alert('Erro', 'Não foi possível gerar o laudo. Tente novamente.');
+    }
   };
 
-  const handleConfirmarGeracao = () => {
-    setShowConfirmPopup(false);
-    setShowSuccessPopup(true);
-  };
-
-  const handleFecharSuccess = () => {
-    setShowSuccessPopup(false);
+  const handleDownloadLaudo = async (laudoId) => {
+    try {
+      const response = await api.get(`/api/reports/${laudoId}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      // Aqui você precisará implementar a lógica para salvar o PDF no dispositivo
+      // Isso pode variar dependendo da plataforma (iOS/Android)
+      // Por enquanto, vamos apenas mostrar uma mensagem de sucesso
+      Alert.alert('Sucesso', 'Laudo baixado com sucesso!');
+    } catch (err) {
+      console.error("Erro ao baixar laudo:", err);
+      Alert.alert('Erro', 'Não foi possível baixar o laudo. Tente novamente.');
+    }
   };
 
   const handleEditEvidencia = (evidencia) => {
@@ -250,6 +309,8 @@ export default function DetalhesCaso({ route, navigation }) {
   }, [showDeleteCaseWarning]);
 
   const renderEvidenciaCard = (evidencia) => {
+    const laudo = laudos[evidencia._id];
+
     return (
       <View key={evidencia._id} style={styles.evidenciaCard}>
         {(evidencia.type === 'imagem' || evidencia.type === 'video') && evidencia.fileUrl && (
@@ -269,13 +330,26 @@ export default function DetalhesCaso({ route, navigation }) {
           </Text>
           
           <View style={styles.evidenciaActions}>
-            <TouchableOpacity
-              style={styles.gerarLaudoButton}
-              onPress={() => handleGerarLaudo(evidencia._id)}
-            >
-              <Feather name="file-text" size={20} color="#357bd2" />
-              <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
-            </TouchableOpacity>
+            {laudo ? (
+              <TouchableOpacity
+                style={styles.gerarLaudoButton}
+                onPress={() => {
+                  setSelectedLaudoId(laudo._id);
+                  setShowDownloadConfirm(true);
+                }}
+              >
+                <Feather name="download" size={20} color="#357bd2" />
+                <Text style={styles.gerarLaudoText}>Baixar Laudo</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.gerarLaudoButton}
+                onPress={() => handleGerarLaudo(evidencia._id)}
+              >
+                <Feather name="file-text" size={20} color="#357bd2" />
+                <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.actionButtons}>
               <TouchableOpacity 
@@ -455,7 +529,10 @@ export default function DetalhesCaso({ route, navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.popupButton, styles.confirmButton]}
-                onPress={handleConfirmarGeracao}
+                onPress={() => {
+                  setShowConfirmPopup(false);
+                  setShowSuccessPopup(true);
+                }}
               >
                 <Text style={styles.popupButtonText}>Confirmar</Text>
               </TouchableOpacity>
@@ -477,7 +554,9 @@ export default function DetalhesCaso({ route, navigation }) {
             </Text>
             <TouchableOpacity
               style={[styles.popupButton, styles.confirmButton]}
-              onPress={handleFecharSuccess}
+              onPress={() => {
+                setShowSuccessPopup(false);
+              }}
             >
               <Text style={styles.popupButtonText}>OK</Text>
             </TouchableOpacity>
@@ -679,6 +758,38 @@ export default function DetalhesCaso({ route, navigation }) {
                 <Text style={styles.popupButtonText}>
                   {canDelete ? 'Excluir' : `Aguarde ${deleteCountdown}s`}
                 </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Download */}
+      <Modal
+        visible={showDownloadConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Deseja baixar o laudo em PDF?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowDownloadConfirm(false)}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={() => {
+                  setShowDownloadConfirm(false);
+                  handleDownloadLaudo(selectedLaudoId);
+                }}
+              >
+                <Text style={styles.popupButtonText}>Baixar</Text>
               </TouchableOpacity>
             </View>
           </View>
