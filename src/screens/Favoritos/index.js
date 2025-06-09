@@ -87,7 +87,9 @@ export default function Favoritos() {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Casos Favoritos</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Casos Favoritos</Text>
+      </View>
       
       {favoritos.length > 0 ? (
         favoritos.map((caso) => (
@@ -118,19 +120,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    padding: 20,
   },
-  title: {
+  headerContainer: {
+    backgroundColor: "#357bd2",
+    padding: 20,
+    paddingTop: 40,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 20,
+  },
+  headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
-    color: "#333",
+    color: "#fff",
     textAlign: "center",
   },
   card: {
     backgroundColor: "#f5f5f5",
     borderRadius: 12,
     padding: 15,
+    marginHorizontal: 20,
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#ddd",
@@ -174,5 +184,6 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 16,
     marginTop: 20,
+    marginHorizontal: 20,
   },
 }); 
