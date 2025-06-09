@@ -11,7 +11,7 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
 
 export default function Casos() {
@@ -24,10 +24,12 @@ export default function Casos() {
   const [error, setError] = useState(null);
   const [responsaveis, setResponsaveis] = useState([]);
 
-  useEffect(() => {
-    fetchResponsaveis();
-    fetchCasos();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchResponsaveis();
+      fetchCasos();
+    }, [])
+  );
 
   const fetchResponsaveis = async () => {
     try {

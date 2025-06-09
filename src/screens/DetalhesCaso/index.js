@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -15,9 +16,11 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import ModalAdicionarEvidencia from '../../components/ModalAdicionarEvidencia';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function DetalhesCaso({ route }) {
+export default function DetalhesCaso({ route, navigation }) {
   const { caso } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
@@ -28,10 +31,22 @@ export default function DetalhesCaso({ route }) {
   const [error, setError] = useState(null);
   const [evidencias, setEvidencias] = useState([]);
   const [casoDetalhado, setCasoDetalhado] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedEvidencia, setSelectedEvidencia] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [editDate, setEditDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showDeleteCaseConfirm, setShowDeleteCaseConfirm] = useState(false);
+  const [showDeleteCaseWarning, setShowDeleteCaseWarning] = useState(false);
+  const [deleteCountdown, setDeleteCountdown] = useState(5);
+  const [canDelete, setCanDelete] = useState(false);
 
   useEffect(() => {
     fetchCasoDetalhado();
     fetchEvidencias();
+    checkFavorito();
   }, []);
 
   const fetchCasoDetalhado = async () => {
@@ -56,6 +71,36 @@ export default function DetalhesCaso({ route }) {
       console.error("Erro ao buscar evidências:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkFavorito = async () => {
+    try {
+      const favoritosIds = await AsyncStorage.getItem('favoritos');
+      if (favoritosIds) {
+        const ids = JSON.parse(favoritosIds);
+        setIsFavorito(ids.includes(caso._id));
+      }
+    } catch (err) {
+      console.error("Erro ao verificar favorito:", err);
+    }
+  };
+
+  const toggleFavorito = async () => {
+    try {
+      const favoritosIds = await AsyncStorage.getItem('favoritos');
+      let ids = favoritosIds ? JSON.parse(favoritosIds) : [];
+
+      if (isFavorito) {
+        ids = ids.filter(id => id !== caso._id);
+      } else {
+        ids.push(caso._id);
+      }
+
+      await AsyncStorage.setItem('favoritos', JSON.stringify(ids));
+      setIsFavorito(!isFavorito);
+    } catch (err) {
+      console.error("Erro ao atualizar favorito:", err);
     }
   };
 
@@ -118,9 +163,77 @@ export default function DetalhesCaso({ route }) {
     setShowSuccessPopup(false);
   };
 
-  const toggleFavorito = () => {
-    setIsFavorito(!isFavorito);
+  const handleEditEvidencia = (evidencia) => {
+    setSelectedEvidencia(evidencia);
+    setEditText(evidencia.text || '');
+    setEditDate(new Date(evidencia.collectionDate));
+    setEditModalVisible(true);
   };
+
+  const handleSaveEdit = async () => {
+    try {
+      await api.put(`/api/evidences/${selectedEvidencia._id}`, {
+        text: editText,
+        collectionDate: editDate.toISOString(),
+      });
+      
+      // Atualiza a lista de evidências
+      const response = await api.get('/api/evidences');
+      const evidenciasDoCaso = response.data.filter(evidencia => evidencia.case === caso._id);
+      setEvidencias(evidenciasDoCaso);
+      
+      setEditModalVisible(false);
+    } catch (err) {
+      console.error("Erro ao editar evidência:", err);
+      setError("Erro ao editar evidência");
+    }
+  };
+
+  const handleDeleteEvidencia = async () => {
+    try {
+      await api.delete(`/api/evidences/${selectedEvidencia._id}`);
+      
+      // Atualiza a lista de evidências
+      const response = await api.get('/api/evidences');
+      const evidenciasDoCaso = response.data.filter(evidencia => evidencia.case === caso._id);
+      setEvidencias(evidenciasDoCaso);
+      
+      setShowDeleteWarning(false);
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      console.error("Erro ao excluir evidência:", err);
+      setError("Erro ao excluir evidência");
+    }
+  };
+
+  const handleDeleteCase = async () => {
+    try {
+      await api.delete(`/api/cases/${caso._id}`);
+      navigation.goBack();
+    } catch (err) {
+      console.error("Erro ao excluir caso:", err);
+      setError("Erro ao excluir caso");
+    }
+  };
+
+  useEffect(() => {
+    let timer;
+    if (showDeleteCaseWarning) {
+      setDeleteCountdown(5);
+      setCanDelete(false);
+      timer = setInterval(() => {
+        setDeleteCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setCanDelete(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [showDeleteCaseWarning]);
 
   const renderEvidenciaCard = (evidencia) => {
     return (
@@ -151,10 +264,19 @@ export default function DetalhesCaso({ route }) {
             </TouchableOpacity>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={[styles.actionButton, styles.editButton]}>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.editButton]}
+                onPress={() => handleEditEvidencia(evidencia)}
+              >
                 <Feather name="edit-2" size={20} color="#87c05e" />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.deleteEvidenciaButton]}
+                onPress={() => {
+                  setSelectedEvidencia(evidencia);
+                  setShowDeleteConfirm(true);
+                }}
+              >
                 <Feather name="trash-2" size={20} color="#ff4444" />
               </TouchableOpacity>
             </View>
@@ -275,6 +397,16 @@ export default function DetalhesCaso({ route }) {
         )}
       </View>
 
+      <View style={styles.deleteCaseSection}>
+        <TouchableOpacity
+          style={styles.deleteCaseButton}
+          onPress={() => setShowDeleteCaseConfirm(true)}
+        >
+          <Feather name="trash-2" size={20} color="#fff" />
+          <Text style={styles.deleteCaseButtonText}>Excluir Caso</Text>
+        </TouchableOpacity>
+      </View>
+
       <ModalAdicionarEvidencia
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -327,6 +459,206 @@ export default function DetalhesCaso({ route }) {
             >
               <Text style={styles.popupButtonText}>OK</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Edição */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContent}>
+            <Text style={styles.modalTitle}>Editar Evidência</Text>
+            
+            <Text style={styles.inputLabel}>Descrição</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editText}
+              onChangeText={setEditText}
+              multiline
+              numberOfLines={4}
+              placeholder="Digite a descrição da evidência"
+            />
+
+            <Text style={styles.inputLabel}>Data de Coleta</Text>
+            <TouchableOpacity 
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.dateButtonText}>
+                {editDate.toLocaleDateString('pt-BR')}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={editDate}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setEditDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.modalButtonText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Tem certeza que deseja excluir esta evidência?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowDeleteConfirm(false)}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={() => {
+                  setShowDeleteConfirm(false);
+                  setShowDeleteWarning(true);
+                }}
+              >
+                <Text style={styles.popupButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Aviso de Exclusão */}
+      <Modal
+        visible={showDeleteWarning}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Atenção! Esta ação é irreversível. Deseja continuar?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowDeleteWarning(false)}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleDeleteEvidencia}
+              >
+                <Text style={styles.popupButtonText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Exclusão do Caso */}
+      <Modal
+        visible={showDeleteCaseConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Tem certeza que deseja excluir este caso?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowDeleteCaseConfirm(false)}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={() => {
+                  setShowDeleteCaseConfirm(false);
+                  setShowDeleteCaseWarning(true);
+                }}
+              >
+                <Text style={styles.popupButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Aviso de Exclusão do Caso */}
+      <Modal
+        visible={showDeleteCaseWarning}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.warningTitle}>ATENÇÃO!</Text>
+            <Text style={styles.warningText}>
+              Esta ação é <Text style={styles.warningHighlight}>IRREVERSÍVEL</Text> e excluirá permanentemente:
+            </Text>
+            <View style={styles.warningList}>
+              <Text style={styles.warningItem}>• Todas as evidências do caso</Text>
+              <Text style={styles.warningItem}>• Todos os laudos gerados</Text>
+              <Text style={styles.warningItem}>• Todo o histórico do caso</Text>
+            </View>
+            <Text style={styles.warningText}>
+              Deseja realmente continuar?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowDeleteCaseWarning(false)}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.popupButton,
+                  styles.deleteButton,
+                  !canDelete && styles.disabledButton
+                ]}
+                onPress={handleDeleteCase}
+                disabled={!canDelete}
+              >
+                <Text style={styles.popupButtonText}>
+                  {canDelete ? 'Excluir' : `Aguarde ${deleteCountdown}s`}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -517,8 +849,11 @@ const styles = StyleSheet.create({
   editButton: {
     borderColor: '#87c05e',
   },
-  deleteButton: {
+  deleteEvidenciaButton: {
     borderColor: '#ff4444',
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444',
   },
   modalOverlay: {
     flex: 1,
@@ -587,5 +922,112 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 20,
     fontSize: 16,
+  },
+  editModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 500,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#87c05e',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  deleteCaseSection: {
+    marginTop: 30,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  deleteCaseButton: {
+    backgroundColor: '#ff4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  deleteCaseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  warningTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ff4444',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  warningText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  warningHighlight: {
+    color: '#ff4444',
+    fontWeight: 'bold',
+  },
+  warningList: {
+    marginBottom: 15,
+    paddingHorizontal: 20,
+  },
+  warningItem: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 }); 
