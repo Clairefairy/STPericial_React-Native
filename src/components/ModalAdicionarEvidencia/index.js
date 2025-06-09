@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,38 +8,61 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
+import api from '../../services/api';
 
-export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
+export default function ModalAdicionarEvidencia({ visible, onClose, onSave, casoId }) {
   const [evidencias, setEvidencias] = useState([
     {
       id: 1,
-      tipo: 'Imagem',
-      descricao: '',
-      dataColeta: new Date(),
-      arquivo: null,
+      type: 'Imagem',
+      text: '',
+      collectionDate: new Date(),
+      fileUrl: null,
+      fileName: null,
     },
   ]);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedEvidenciaIndex, setSelectedEvidenciaIndex] = useState(0);
-  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [selectedEvidenciaId, setSelectedEvidenciaId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  useEffect(() => {
+    getCurrentUserId();
+  }, []);
+
+  const getCurrentUserId = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setCurrentUserId(decoded.id);
+      }
+    } catch (err) {
+      console.error("Erro ao obter ID do usuário:", err);
+    }
+  };
 
   const handleAddEvidencia = () => {
     setEvidencias([
       ...evidencias,
       {
         id: evidencias.length + 1,
-        tipo: 'Imagem',
-        descricao: '',
-        dataColeta: new Date(),
-        arquivo: null,
+        type: 'Imagem',
+        text: '',
+        collectionDate: new Date(),
+        fileUrl: null,
+        fileName: null,
       },
     ]);
   };
@@ -53,40 +76,129 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
     setShowDatePicker(false);
     if (selectedDate) {
       const novasEvidencias = [...evidencias];
-      novasEvidencias[index].dataColeta = selectedDate;
+      novasEvidencias[index].collectionDate = selectedDate;
       setEvidencias(novasEvidencias);
     }
   };
 
   const handleTipoChange = (value, index) => {
     const novasEvidencias = [...evidencias];
-    novasEvidencias[index].tipo = value;
+    novasEvidencias[index].type = value;
     setEvidencias(novasEvidencias);
   };
 
   const handleDescricaoChange = (value, index) => {
     const novasEvidencias = [...evidencias];
-    novasEvidencias[index].descricao = value;
+    novasEvidencias[index].text = value;
     setEvidencias(novasEvidencias);
   };
 
-  const handleArquivoSelect = (index) => {
-    // Implementar seleção de arquivo posteriormente
-    console.log('Selecionar arquivo para evidência', index);
+  const handleCamera = async (index) => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Erro', 'Precisamos de permissão para acessar a câmera');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const novasEvidencias = [...evidencias];
+        novasEvidencias[index].fileUrl = result.assets[0].uri;
+        novasEvidencias[index].fileName = `foto_${Date.now()}.jpg`;
+        setEvidencias(novasEvidencias);
+      }
+    } catch (err) {
+      console.error('Erro ao capturar imagem:', err);
+      Alert.alert('Erro', 'Não foi possível capturar a imagem');
+    }
   };
 
-  const handleGerarLaudo = (evidenciaId) => {
-    setSelectedEvidenciaId(evidenciaId);
-    setShowConfirmPopup(true);
+  const handleFileSelect = async (index) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false
+      });
+
+      console.log('Resultado do DocumentPicker:', result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        const novasEvidencias = [...evidencias];
+        novasEvidencias[index].fileUrl = file.uri;
+        novasEvidencias[index].fileName = file.name;
+        setEvidencias(novasEvidencias);
+        
+        console.log('Nova evidência:', novasEvidencias[index]);
+      }
+    } catch (err) {
+      console.error('Erro ao selecionar arquivo:', err);
+      Alert.alert('Erro', 'Não foi possível selecionar o arquivo');
+    }
   };
 
-  const handleConfirmarGeracao = () => {
-    setShowConfirmPopup(false);
-    setShowSuccessPopup(true);
+  const handleClearFile = (index) => {
+    const novasEvidencias = [...evidencias];
+    novasEvidencias[index].fileUrl = null;
+    novasEvidencias[index].fileName = null;
+    setEvidencias(novasEvidencias);
   };
 
-  const handleFecharSuccess = () => {
-    setShowSuccessPopup(false);
+  const handleSave = async () => {
+    if (!currentUserId) {
+      Alert.alert('Erro', 'Usuário não identificado');
+      return;
+    }
+
+    if (!casoId) {
+      Alert.alert('Erro', 'Caso não identificado');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const promises = evidencias.map(async (evidencia) => {
+        const formData = new FormData();
+        formData.append('type', evidencia.type.toLowerCase());
+        formData.append('text', evidencia.text);
+        formData.append('collectionDate', evidencia.collectionDate.toISOString());
+        formData.append('collectedBy', currentUserId);
+        formData.append('case', casoId);
+
+        if (evidencia.fileUrl) {
+          const fileUri = evidencia.fileUrl;
+          const fileType = evidencia.fileName.split('.').pop();
+          formData.append('file', {
+            uri: fileUri,
+            name: evidencia.fileName,
+            type: `application/${fileType}`,
+          });
+        }
+
+        return api.post('/api/evidences', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      });
+
+      await Promise.all(promises);
+      Alert.alert('Sucesso', 'Evidências salvas com sucesso!');
+      onSave();
+      onClose();
+    } catch (err) {
+      console.error('Erro ao salvar evidências:', err);
+      Alert.alert('Erro', `Não foi possível salvar as evidências.\n${err?.response?.data?.message || err.message || ''}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -119,7 +231,7 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
                   <Text style={styles.label}>Tipo</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
-                      selectedValue={evidencia.tipo}
+                      selectedValue={evidencia.type}
                       onValueChange={(value) => handleTipoChange(value, index)}
                       style={styles.picker}
                     >
@@ -137,7 +249,7 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
                     style={styles.textArea}
                     multiline
                     numberOfLines={4}
-                    value={evidencia.descricao}
+                    value={evidencia.text}
                     onChangeText={(value) => handleDescricaoChange(value, index)}
                     placeholder="Digite a descrição da evidência..."
                   />
@@ -153,7 +265,7 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
                     }}
                   >
                     <Text style={styles.dateButtonText}>
-                      {evidencia.dataColeta.toLocaleDateString()}
+                      {evidencia.collectionDate.toLocaleDateString()}
                     </Text>
                     <Icon name="calendar-today" size={20} color="#357bd2" />
                   </TouchableOpacity>
@@ -161,13 +273,36 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Arquivo</Text>
-                  <TouchableOpacity
-                    style={styles.fileButton}
-                    onPress={() => handleArquivoSelect(index)}
-                  >
-                    <Feather name="upload" size={20} color="#357bd2" />
-                    <Text style={styles.fileButtonText}>Selecionar arquivo</Text>
-                  </TouchableOpacity>
+                  {evidencia.fileName ? (
+                    <View style={styles.fileInfoContainer}>
+                      <Text style={styles.fileName} numberOfLines={1}>
+                        {evidencia.fileName}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.clearFileButton}
+                        onPress={() => handleClearFile(index)}
+                      >
+                        <Feather name="x" size={20} color="#ff4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.fileButtonsContainer}>
+                      <TouchableOpacity
+                        style={[styles.fileButton, styles.cameraButton]}
+                        onPress={() => handleCamera(index)}
+                      >
+                        <Feather name="camera" size={20} color="#357bd2" />
+                        <Text style={styles.fileButtonText}>Câmera</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.fileButton, styles.fileSelectButton]}
+                        onPress={() => handleFileSelect(index)}
+                      >
+                        <Feather name="upload" size={20} color="#357bd2" />
+                        <Text style={styles.fileButtonText}>Selecionar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
             ))}
@@ -185,13 +320,17 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
-                onPress={() => onSave(evidencias)}
+                onPress={handleSave}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>Salvar Tudo</Text>
+                <Text style={styles.buttonText}>
+                  {loading ? 'Salvando...' : 'Salvar Tudo'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={onClose}
+                disabled={loading}
               >
                 <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
@@ -202,60 +341,12 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave }) {
 
       {showDatePicker && (
         <DateTimePicker
-          value={evidencias[selectedEvidenciaIndex].dataColeta}
+          value={evidencias[selectedEvidenciaIndex].collectionDate}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={(event, date) => handleDateChange(event, date, selectedEvidenciaIndex)}
         />
       )}
-
-      {/* Popup de Confirmação */}
-      <Modal
-        visible={showConfirmPopup}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.popupContent}>
-            <Text style={styles.popupText}>
-              Confirma geração de laudo para Evidência {selectedEvidenciaId}?
-            </Text>
-            <View style={styles.popupButtons}>
-              <TouchableOpacity
-                style={[styles.popupButton, styles.confirmButton]}
-                onPress={handleConfirmarGeracao}
-              >
-                <Text style={styles.buttonText}>Confirmar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.popupButton, styles.cancelButton]}
-                onPress={() => setShowConfirmPopup(false)}
-              >
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Popup de Sucesso */}
-      <Modal
-        visible={showSuccessPopup}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.popupContent}>
-            <Text style={styles.popupText}>Laudo gerado com sucesso!</Text>
-            <TouchableOpacity
-              style={[styles.popupButton, styles.confirmButton]}
-              onPress={handleFecharSuccess}
-            >
-              <Text style={styles.buttonText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </Modal>
   );
 }
@@ -347,7 +438,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  fileButtonsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   fileButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -357,9 +453,29 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
   },
-  fileButtonText: {
-    fontSize: 16,
-    color: '#357bd2',
+  cameraButton: {
+    backgroundColor: '#f8f9fa',
+  },
+  fileSelectButton: {
+    backgroundColor: '#f8f9fa',
+  },
+  fileInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  fileName: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    marginRight: 8,
+  },
+  clearFileButton: {
+    padding: 4,
   },
   bottomButtonsContainer: {
     marginTop: 'auto',

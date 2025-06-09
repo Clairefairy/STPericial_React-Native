@@ -398,10 +398,14 @@ export default function DetalhesCaso({ route, navigation }) {
     );
   };
 
-  const handleSaveEvidencias = (novasEvidencias) => {
-    // Aqui você implementará a lógica para salvar as evidências
-    console.log('Salvando evidências:', novasEvidencias);
-    setModalVisible(false);
+  const handleSaveEvidencias = async () => {
+    try {
+      await fetchEvidencias(); // Atualiza a lista de evidências
+      setModalVisible(false);
+    } catch (err) {
+      console.error('Erro ao atualizar evidências:', err);
+      Alert.alert('Erro', 'Não foi possível atualizar a lista de evidências');
+    }
   };
 
   if (loading) {
@@ -531,6 +535,7 @@ export default function DetalhesCaso({ route, navigation }) {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSaveEvidencias}
+        casoId={caso._id}
       />
 
       {/* Popup de Confirmação */}
