@@ -6,6 +6,7 @@ import Home from "../screens/BemVindo";
 import Login from "../screens/Login";
 import Bemvindo from "../screens/BemVindo";
 import Cadastro from "../screens/Cadastro";
+import DetalhesCaso from "../screens/DetalhesCaso";
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,20 @@ export default function Routes() {
         component={CustomTabNavigator}
         options={{
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="DetalhesCaso"
+        component={DetalhesCaso}
+        options={{
+          title: "Detalhes do Caso",
+          headerStyle: {
+            backgroundColor: "#357bd2",
+          },
+          headerTintColor: "#fff",
+          headerTitleStyle: {
+            fontWeight: "bold",
+          },
         }}
       />
     </Stack.Navigator>

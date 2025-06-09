@@ -10,8 +10,10 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 export default function Casos() {
+  const navigation = useNavigation();
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [responsavelFilter, setResponsavelFilter] = useState("");
   const [ordenacao, setOrdenacao] = useState("Mais recentes");
@@ -49,6 +51,10 @@ export default function Casos() {
       default:
         return null;
     }
+  };
+
+  const handleDetalhes = (caso) => {
+    navigation.navigate("DetalhesCaso", { caso });
   };
 
   return (
@@ -122,7 +128,10 @@ export default function Casos() {
             </View>
             <Text style={styles.cell}>{caso.dataAbertura}</Text>
             <View style={styles.actionsCell}>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleDetalhes(caso)}
+              >
                 <Icon name="assignment" size={24} color="#357bd2" />
               </TouchableOpacity>
             </View>
