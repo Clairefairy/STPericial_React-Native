@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,10 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
+import ModalAdicionarEvidencia from '../../components/ModalAdicionarEvidencia';
 
 export default function DetalhesCaso({ route }) {
+  const [modalVisible, setModalVisible] = useState(false);
   // Dados de exemplo (posteriormente virão da API)
   const caso = {
     id: "CASE-001",
@@ -95,13 +97,31 @@ export default function DetalhesCaso({ route }) {
           <Text style={styles.evidenciaDescricao}>{evidencia.descricao}</Text>
           <Text style={styles.evidenciaData}>Data de coleta: {evidencia.dataColeta}</Text>
           <Text style={styles.evidenciaColetor}>Coletado por: {evidencia.coletadoPor}</Text>
+          
+          <View style={styles.evidenciaActions}>
+            <TouchableOpacity style={[styles.actionButton, styles.editButton]}>
+              <Feather name="edit-2" size={20} color="#87c05e" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+              <Feather name="trash-2" size={20} color="#ff4444" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   };
 
+  const handleSaveEvidencias = (novasEvidencias) => {
+    // Aqui você implementará a lógica para salvar as evidências
+    console.log('Salvando evidências:', novasEvidencias);
+    setModalVisible(false);
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       <Text style={styles.casoId}>{caso.id}</Text>
       
       <View style={styles.tipoContainer}>
@@ -155,13 +175,22 @@ export default function DetalhesCaso({ route }) {
       <View style={styles.evidenciasSection}>
         <View style={styles.evidenciasHeader}>
           <Text style={styles.sectionTitle}>Evidências</Text>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
             <Feather name="file-plus" size={20} color="#fff" />
             <Text style={styles.addButtonText}>Adicionar evidência</Text>
           </TouchableOpacity>
         </View>
         {caso.evidencias.map(renderEvidenciaCard)}
       </View>
+
+      <ModalAdicionarEvidencia
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSaveEvidencias}
+      />
     </ScrollView>
   );
 }
@@ -170,8 +199,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollContent: {
     padding: 20,
-    paddingBottom: 60,
+    paddingBottom: 80,
   },
   casoId: {
     fontSize: 14,
@@ -312,5 +343,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 8,
     fontWeight: '500',
+  },
+  evidenciaActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+    gap: 10,
+  },
+  actionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+  },
+  editButton: {
+    borderColor: '#87c05e',
+  },
+  deleteButton: {
+    borderColor: '#ff4444',
   },
 }); 
