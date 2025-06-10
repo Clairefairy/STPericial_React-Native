@@ -42,7 +42,7 @@ export default function AdicionarCaso() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [victim, setVictim] = useState('');
+  const [victim, setVictim] = useState([]); // Alterado para array
   const [usuarios, setUsuarios] = useState([]); // lista de responsáveis
   const [vitimas, setVitimas] = useState([]); // lista de vítimas
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -142,7 +142,7 @@ export default function AdicionarCaso() {
         openingDate: dataAbertura.toISOString(),
         closingDate: dataFechamento ? dataFechamento.toISOString() : undefined,
         responsible: currentUserId,
-        victim: victim || undefined,
+        victim: victim.map(v => v._id), // Enviar array de IDs das vítimas
       };
 
       await api.post('/api/cases', payload);
@@ -158,7 +158,7 @@ export default function AdicionarCaso() {
       setNumberProcess('');
       setDataAbertura(new Date());
       setDataFechamento(null);
-      setVictim('');
+      setVictim([]);
       setSearchVictim('');
     } catch (err) {
       setIsSuccess(false);
@@ -189,7 +189,8 @@ export default function AdicionarCaso() {
     if (text.length > 0) {
       const filtered = vitimas.filter(v => 
         (v.name?.toLowerCase().includes(text.toLowerCase()) || 
-         v._id.toLowerCase().includes(text.toLowerCase()))
+         v._id.toLowerCase().includes(text.toLowerCase())) &&
+        !victim.some(selectedVictim => selectedVictim._id === v._id) // Não mostrar vítimas já selecionadas
       );
       setFilteredVictims(filtered);
       setShowVictimSuggestions(true);
@@ -200,13 +201,17 @@ export default function AdicionarCaso() {
   };
 
   const handleVictimSelect = (selectedVictim) => {
-    setVictim(selectedVictim._id);
-    setSearchVictim(selectedVictim.name || 'Vítima sem nome');
+    setVictim([...victim, selectedVictim]);
+    setSearchVictim('');
     setShowVictimSuggestions(false);
   };
 
+  const handleRemoveVictim = (victimId) => {
+    setVictim(victim.filter(v => v._id !== victimId));
+  };
+
   const handleClearVictim = () => {
-    setVictim('');
+    setVictim([]);
     setSearchVictim('');
   };
 
@@ -356,17 +361,13 @@ export default function AdicionarCaso() {
       <View style={styles.victimSearchContainer}>
         <View style={styles.victimInputWrapper}>
           <TextInput
-            style={[
-              styles.victimSearchInput,
-              victim && styles.victimSearchInputDisabled
-            ]}
+            style={styles.victimSearchInput}
             placeholder="Pesquisar vítima por nome ou ID..."
             value={searchVictim}
             onChangeText={handleVictimSearch}
-            onFocus={() => !victim && setShowVictimSuggestions(true)}
-            editable={!victim}
+            onFocus={() => setShowVictimSuggestions(true)}
           />
-          {victim && (
+          {victim.length > 0 && (
             <TouchableOpacity
               style={styles.clearVictimButton}
               onPress={handleClearVictim}
@@ -375,7 +376,7 @@ export default function AdicionarCaso() {
             </TouchableOpacity>
           )}
         </View>
-        {showVictimSuggestions && filteredVictims.length > 0 && !victim && (
+        {showVictimSuggestions && filteredVictims.length > 0 && (
           <View style={styles.suggestionsContainer}>
             <FlatList
               data={filteredVictims}
@@ -385,6 +386,23 @@ export default function AdicionarCaso() {
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled={true}
             />
+          </View>
+        )}
+        {victim.length > 0 && (
+          <View style={styles.selectedVictimsContainer}>
+            {victim.map((v) => (
+              <View key={v._id} style={styles.selectedVictimTag}>
+                <Text style={styles.selectedVictimText}>
+                  {v.name || 'Vítima sem nome'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => handleRemoveVictim(v._id)}
+                  style={styles.removeVictimButton}
+                >
+                  <Icon name="close" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
         )}
       </View>
@@ -741,5 +759,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  selectedVictimsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  selectedVictimTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#357bd2',
+  },
+  selectedVictimText: {
+    color: '#357bd2',
+    fontSize: 14,
+    marginRight: 4,
+  },
+  removeVictimButton: {
+    padding: 2,
   },
 });
