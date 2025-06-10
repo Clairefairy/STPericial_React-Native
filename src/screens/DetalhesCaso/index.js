@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import MapView, { Marker } from 'react-native-maps';
 import ModalAdicionarEvidencia from '../../components/ModalAdicionarEvidencia';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../../services/api';
@@ -55,6 +57,10 @@ export default function DetalhesCaso({ route, navigation }) {
   const [isGeneratingLaudo, setIsGeneratingLaudo] = useState(false);
   const [isDeletingLaudo, setIsDeletingLaudo] = useState(false);
   const [showDeletingLaudoConfirm, setShowDeletingLaudoConfirm] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -423,11 +429,18 @@ export default function DetalhesCaso({ route, navigation }) {
     return (
       <View key={evidencia._id} style={styles.evidenciaCard}>
         {(evidencia.type === 'imagem' || evidencia.type === 'video') && evidencia.fileUrl && (
-          <Image
-            source={{ uri: evidencia.fileUrl }}
-            style={styles.evidenciaPreview}
-            resizeMode="cover"
-          />
+          <TouchableOpacity
+            onPress={() => {
+              setSelectedImage(evidencia.fileUrl);
+              setShowImageModal(true);
+            }}
+          >
+            <Image
+              source={{ uri: evidencia.fileUrl }}
+              style={styles.evidenciaPreview}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
         )}
         <View style={styles.evidenciaInfo}>
           <Text style={styles.evidenciaNumero}>Evidência #{evidenciaIndex}</Text>
@@ -443,7 +456,19 @@ export default function DetalhesCaso({ route, navigation }) {
               Local: {evidencia.address}
             </Text>
           )}
-          
+          {/* Botão Ver no mapa */}
+          {evidencia.latitude && evidencia.longitude && (
+            <TouchableOpacity
+              style={styles.verNoMapaButton}
+              onPress={() => {
+                setSelectedMapLocation({ latitude: evidencia.latitude, longitude: evidencia.longitude });
+                setShowMapModal(true);
+              }}
+            >
+              <Feather name="map-pin" size={18} color="#fff" />
+              <Text style={styles.verNoMapaButtonText}>Ver no mapa</Text>
+            </TouchableOpacity>
+          )}
           <View style={styles.evidenciaActions}>
             {laudo ? (
               <View style={styles.laudoActions}>
@@ -1050,6 +1075,60 @@ export default function DetalhesCaso({ route, navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal para visualização da imagem */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={styles.imageModalOverlay}>
+          <TouchableOpacity
+            style={styles.closeImageButton}
+            onPress={() => setShowImageModal(false)}
+          >
+            <Feather name="x" size={24} color="#fff" />
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.fullImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
+
+      {/* Modal para visualização do mapa */}
+      <Modal
+        visible={showMapModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowMapModal(false)}
+      >
+        <View style={styles.mapModalOverlay}>
+          <TouchableOpacity
+            style={styles.closeMapButton}
+            onPress={() => setShowMapModal(false)}
+          >
+            <Feather name="x" size={24} color="#fff" />
+          </TouchableOpacity>
+          {selectedMapLocation && (
+            <MapView
+              style={styles.fullMap}
+              initialRegion={{
+                latitude: selectedMapLocation.latitude,
+                longitude: selectedMapLocation.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              }}
+            >
+              <Marker coordinate={selectedMapLocation} />
+            </MapView>
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1470,5 +1549,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 5,
+  },
+  verNoMapaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFA500', // amarelo-alaranjado
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  verNoMapaButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  closeImageButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  mapModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullMap: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  closeMapButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
   },
 }); 
