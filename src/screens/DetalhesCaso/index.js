@@ -62,6 +62,9 @@ export default function DetalhesCaso({ route, navigation }) {
   const [showMapModal, setShowMapModal] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [showSendEmailConfirm, setShowSendEmailConfirm] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showEmailSuccess, setShowEmailSuccess] = useState(false);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -441,6 +444,20 @@ export default function DetalhesCaso({ route, navigation }) {
     return () => clearInterval(timer);
   }, [showDeleteCaseWarning]);
 
+  const handleSendEmail = async (laudoId) => {
+    try {
+      setIsSendingEmail(true);
+      await api.post(`/api/reports/sendEmail/${laudoId}`);
+      setShowSendEmailConfirm(false);
+      setShowEmailSuccess(true);
+    } catch (err) {
+      console.error("Erro ao enviar e-mail:", err);
+      Alert.alert('Erro', 'Não foi possível enviar o e-mail. Tente novamente.');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const renderEvidenciaCard = (evidencia, index) => {
     const laudo = laudos[evidencia._id];
     const evidenciaIndex = String(index + 1).padStart(3, '0');
@@ -495,11 +512,11 @@ export default function DetalhesCaso({ route, navigation }) {
                   style={styles.gerarLaudoButton}
                   onPress={() => {
                     setSelectedLaudoId(laudo._id);
-                    setShowDownloadConfirm(true);
+                    setShowSendEmailConfirm(true);
                   }}
                 >
-                  <Feather name="download" size={20} color="#357bd2" />
-                  <Text style={styles.gerarLaudoText}>Baixar Laudo</Text>
+                  <Feather name="mail" size={20} color="#357bd2" />
+                  <Text style={styles.gerarLaudoText}>Enviar Laudo</Text>
                 </TouchableOpacity>
                 {isAdmin && (
                   <TouchableOpacity
@@ -1158,6 +1175,62 @@ export default function DetalhesCaso({ route, navigation }) {
               <Marker coordinate={selectedMapLocation} />
             </MapView>
           )}
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Envio de E-mail */}
+      <Modal
+        visible={showSendEmailConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Deseja receber o laudo por e-mail?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowSendEmailConfirm(false)}
+                disabled={isSendingEmail}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={() => handleSendEmail(selectedLaudoId)}
+                disabled={isSendingEmail}
+              >
+                {isSendingEmail ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.popupButtonText}>Enviar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Sucesso do E-mail */}
+      <Modal
+        visible={showEmailSuccess}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              E-mail enviado!
+            </Text>
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={() => setShowEmailSuccess(false)}
+            >
+              <Text style={styles.popupButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </ScrollView>
