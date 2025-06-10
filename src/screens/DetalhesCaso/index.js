@@ -64,6 +64,28 @@ export default function DetalhesCaso({ route, navigation }) {
     getCurrentUserId();
   }, []);
 
+  // Adicionar listener para atualizar dados quando a tela receber foco ou novos parâmetros
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (route.params?.shouldRefresh) {
+        fetchCasoDetalhado();
+        fetchEvidencias();
+        fetchLaudos();
+        // Limpar o parâmetro shouldRefresh
+        navigation.setParams({ shouldRefresh: false });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route.params]);
+
+  // Atualizar o caso quando os parâmetros mudarem
+  useEffect(() => {
+    if (route.params?.caso) {
+      setCasoDetalhado(route.params.caso);
+    }
+  }, [route.params?.caso]);
+
   const fetchCasoDetalhado = async () => {
     try {
       const response = await api.get(`/api/cases/${caso._id}`);
@@ -579,13 +601,22 @@ export default function DetalhesCaso({ route, navigation }) {
       </View>
 
       <View style={styles.deleteCaseSection}>
-        <TouchableOpacity
-          style={styles.deleteCaseButton}
-          onPress={() => setShowDeleteCaseConfirm(true)}
-        >
-          <Feather name="trash-2" size={20} color="#fff" />
-          <Text style={styles.deleteCaseButtonText}>Excluir Caso</Text>
-        </TouchableOpacity>
+        <View style={styles.caseActionButtons}>
+          <TouchableOpacity
+            style={[styles.caseActionButton, styles.editCaseButton]}
+            onPress={() => navigation.navigate('EditarCaso', { caso: casoDetalhado })}
+          >
+            <Feather name="edit-2" size={20} color="#fff" />
+            <Text style={styles.caseActionButtonText}>Editar Caso</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.caseActionButton, styles.deleteCaseButton]}
+            onPress={() => setShowDeleteCaseConfirm(true)}
+          >
+            <Feather name="trash-2" size={20} color="#fff" />
+            <Text style={styles.caseActionButtonText}>Excluir Caso</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ModalAdicionarEvidencia
@@ -1310,8 +1341,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
   },
-  deleteCaseButton: {
-    backgroundColor: '#ff4444',
+  caseActionButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  caseActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -1319,7 +1353,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
-  deleteCaseButtonText: {
+  editCaseButton: {
+    backgroundColor: '#87c05e',
+  },
+  deleteCaseButton: {
+    backgroundColor: '#ff4444',
+  },
+  caseActionButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',

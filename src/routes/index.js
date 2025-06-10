@@ -7,6 +7,7 @@ import Login from "../screens/Login";
 import Bemvindo from "../screens/BemVindo";
 import Cadastro from "../screens/Cadastro";
 import DetalhesCaso from "../screens/DetalhesCaso";
+import EditarCaso from "../screens/EditarCaso";
 
 const Stack = createNativeStackNavigator();
 
@@ -54,6 +55,13 @@ export default function Routes() {
           headerTitleStyle: {
             fontWeight: "bold",
           },
+        }}
+      />
+      <Stack.Screen
+        name="EditarCaso"
+        component={EditarCaso}
+        options={{
+          headerShown: false,
         }}
       />
     </Stack.Navigator>
