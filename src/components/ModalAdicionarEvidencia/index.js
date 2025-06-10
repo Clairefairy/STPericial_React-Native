@@ -9,6 +9,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -18,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as jwtDecode from 'jwt-decode';
+import * as Location from 'expo-location';
 import api from '../../services/api';
 
 export default function ModalAdicionarEvidencia({ visible, onClose, onSave, casoId }) {
@@ -29,6 +31,8 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
       collectionDate: new Date(),
       fileUrl: null,
       fileName: null,
+      location: null,
+      address: null,
     },
   ]);
 
@@ -36,6 +40,7 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
   const [selectedEvidenciaIndex, setSelectedEvidenciaIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   useEffect(() => {
     getCurrentUserId();
@@ -63,6 +68,8 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
         collectionDate: new Date(),
         fileUrl: null,
         fileName: null,
+        location: null,
+        address: null,
       },
     ]);
   };
@@ -151,6 +158,74 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
     setEvidencias(novasEvidencias);
   };
 
+  const getAddressFromCoordinates = async (latitude, longitude) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'pt-BR',
+            'User-Agent': 'STPericial/1.0'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Erro na resposta da API');
+      }
+
+      const data = await response.json();
+      if (data && data.display_name) {
+        return data.display_name;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao obter endereço:', error);
+      return null;
+    }
+  };
+
+  const handleGetLocation = async (index) => {
+    try {
+      setIsGettingLocation(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Erro', 'Permissão para acessar a localização foi negada');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const address = await getAddressFromCoordinates(
+        location.coords.latitude,
+        location.coords.longitude
+      );
+
+      const novasEvidencias = [...evidencias];
+      novasEvidencias[index].location = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+      novasEvidencias[index].address = address;
+      setEvidencias(novasEvidencias);
+    } catch (error) {
+      console.error('Erro ao obter localização:', error);
+      Alert.alert('Erro', 'Não foi possível obter a localização');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  const handleClearLocation = (index) => {
+    const novasEvidencias = [...evidencias];
+    novasEvidencias[index].location = null;
+    novasEvidencias[index].address = null;
+    setEvidencias(novasEvidencias);
+  };
+
   const handleSave = async () => {
     if (!currentUserId) {
       Alert.alert('Erro', 'Usuário não identificado');
@@ -171,6 +246,11 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
         formData.append('collectionDate', evidencia.collectionDate.toISOString());
         formData.append('collectedBy', currentUserId);
         formData.append('case', casoId);
+
+        if (evidencia.location) {
+          formData.append('location', JSON.stringify(evidencia.location));
+          formData.append('address', evidencia.address);
+        }
 
         if (evidencia.fileUrl) {
           const fileUri = evidencia.fileUrl;
@@ -302,6 +382,41 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
                         <Text style={styles.fileButtonText}>Selecionar</Text>
                       </TouchableOpacity>
                     </View>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Localização</Text>
+                  {evidencia.address ? (
+                    <View style={styles.locationInfoContainer}>
+                      <Text style={styles.locationText} numberOfLines={2}>
+                        {evidencia.address}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.clearLocationButton}
+                        onPress={() => handleClearLocation(index)}
+                      >
+                        <Feather name="x" size={20} color="#ff4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.locationButton, isGettingLocation && styles.locationButtonDisabled]}
+                      onPress={() => handleGetLocation(index)}
+                      disabled={isGettingLocation}
+                    >
+                      {isGettingLocation ? (
+                        <>
+                          <ActivityIndicator size="small" color="#357bd2" />
+                          <Text style={styles.locationButtonText}>Obtendo localização...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Feather name="map-pin" size={20} color="#357bd2" />
+                          <Text style={styles.locationButtonText}>Capturar Localização</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>
@@ -568,5 +683,42 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#ff4444',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#357bd2',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
+    gap: 8,
+  },
+  locationButtonDisabled: {
+    opacity: 0.7,
+  },
+  locationButtonText: {
+    color: '#357bd2',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  locationInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    marginRight: 8,
+  },
+  clearLocationButton: {
+    padding: 4,
   },
 }); 
