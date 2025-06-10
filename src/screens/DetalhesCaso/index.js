@@ -50,6 +50,11 @@ export default function DetalhesCaso({ route, navigation }) {
   const [selectedLaudoId, setSelectedLaudoId] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [showDeleteLaudoConfirm, setShowDeleteLaudoConfirm] = useState(false);
+  const [showGerarLaudoConfirm, setShowGerarLaudoConfirm] = useState(false);
+  const [selectedEvidenciaIndex, setSelectedEvidenciaIndex] = useState(null);
+  const [isGeneratingLaudo, setIsGeneratingLaudo] = useState(false);
+  const [isDeletingLaudo, setIsDeletingLaudo] = useState(false);
+  const [showDeletingLaudoConfirm, setShowDeletingLaudoConfirm] = useState(false);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -87,7 +92,27 @@ export default function DetalhesCaso({ route, navigation }) {
       setLoading(true);
       const response = await api.get('/api/evidences');
       const evidenciasDoCaso = response.data.filter(evidencia => evidencia.case === caso._id);
-      setEvidencias(evidenciasDoCaso);
+      
+      // Buscar informações dos usuários coletores
+      const evidenciasComColetor = await Promise.all(
+        evidenciasDoCaso.map(async (evidencia) => {
+          if (evidencia.collectedBy) {
+            try {
+              const userResponse = await api.get(`/api/users/${evidencia.collectedBy}`);
+              return {
+                ...evidencia,
+                collectedBy: userResponse.data
+              };
+            } catch (err) {
+              console.error("Erro ao buscar coletor:", err);
+              return evidencia;
+            }
+          }
+          return evidencia;
+        })
+      );
+      
+      setEvidencias(evidenciasComColetor);
       setError(null);
     } catch (err) {
       setError("Erro ao carregar evidências");
@@ -201,6 +226,7 @@ export default function DetalhesCaso({ route, navigation }) {
 
   const handleGerarLaudo = async (evidenciaId) => {
     try {
+      setIsGeneratingLaudo(true);
       if (!currentUserId) {
         Alert.alert('Erro', 'Usuário não identificado. Faça login novamente.');
         return;
@@ -218,6 +244,9 @@ export default function DetalhesCaso({ route, navigation }) {
     } catch (err) {
       console.error("Erro ao gerar laudo:", err);
       Alert.alert('Erro', 'Não foi possível gerar o laudo. Tente novamente.');
+    } finally {
+      setIsGeneratingLaudo(false);
+      setShowGerarLaudoConfirm(false);
     }
   };
 
@@ -239,12 +268,17 @@ export default function DetalhesCaso({ route, navigation }) {
 
   const handleDeleteLaudo = async (laudoId) => {
     try {
+      setIsDeletingLaudo(true);
       await api.delete(`/api/reports/${laudoId}`);
       await fetchLaudos();
       Alert.alert('Sucesso', 'Laudo excluído com sucesso!');
     } catch (err) {
       console.error("Erro ao excluir laudo:", err);
       Alert.alert('Erro', 'Não foi possível excluir o laudo. Tente novamente.');
+    } finally {
+      setIsDeletingLaudo(false);
+      setShowDeleteLaudoConfirm(false);
+      setShowDeletingLaudoConfirm(false);
     }
   };
 
@@ -320,8 +354,9 @@ export default function DetalhesCaso({ route, navigation }) {
     return () => clearInterval(timer);
   }, [showDeleteCaseWarning]);
 
-  const renderEvidenciaCard = (evidencia) => {
+  const renderEvidenciaCard = (evidencia, index) => {
     const laudo = laudos[evidencia._id];
+    const evidenciaIndex = String(index + 1).padStart(3, '0');
 
     return (
       <View key={evidencia._id} style={styles.evidenciaCard}>
@@ -333,12 +368,13 @@ export default function DetalhesCaso({ route, navigation }) {
           />
         )}
         <View style={styles.evidenciaInfo}>
-          <Text style={styles.evidenciaId}>Evidência #{evidencia._id}</Text>
+          <Text style={styles.evidenciaNumero}>Evidência #{evidenciaIndex}</Text>
+          <Text style={styles.evidenciaId}>ID: {evidencia._id}</Text>
           <Text style={styles.evidenciaTipo}>Tipo: {evidencia.type || "Não especificado"}</Text>
           <Text style={styles.evidenciaDescricao}>{evidencia.text || "Sem descrição"}</Text>
           <Text style={styles.evidenciaData}>Data de coleta: {formatDate(evidencia.collectionDate)}</Text>
           <Text style={styles.evidenciaColetor}>
-            Coletado por: {typeof evidencia.collectedBy === 'object' ? evidencia.collectedBy.name : evidencia.collectedBy || "Não informado"}
+            Coletado por: {evidencia.collectedBy?.name || "Não informado"}
           </Text>
           
           <View style={styles.evidenciaActions}>
@@ -360,18 +396,35 @@ export default function DetalhesCaso({ route, navigation }) {
                     setSelectedLaudoId(laudo._id);
                     setShowDeleteLaudoConfirm(true);
                   }}
+                  disabled={isDeletingLaudo}
                 >
-                  <Feather name="trash-2" size={20} color="#ff4444" />
-                  <Text style={[styles.gerarLaudoText, styles.deleteLaudoText]}>Excluir Laudo</Text>
+                  {isDeletingLaudo ? (
+                    <ActivityIndicator size="small" color="#ff4444" />
+                  ) : (
+                    <Feather name="trash-2" size={20} color="#ff4444" />
+                  )}
+                  <Text style={[styles.gerarLaudoText, styles.deleteLaudoText]}>
+                    {isDeletingLaudo ? 'Excluindo...' : 'Excluir Laudo'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={styles.gerarLaudoButton}
-                onPress={() => handleGerarLaudo(evidencia._id)}
+                style={[styles.gerarLaudoButton, isGeneratingLaudo && styles.disabledButton]}
+                onPress={() => {
+                  setSelectedEvidenciaIndex(evidenciaIndex);
+                  setShowGerarLaudoConfirm(true);
+                }}
+                disabled={isGeneratingLaudo}
               >
-                <Feather name="file-text" size={20} color="#357bd2" />
-                <Text style={styles.gerarLaudoText}>Gerar Laudo</Text>
+                {isGeneratingLaudo ? (
+                  <ActivityIndicator size="small" color="#357bd2" />
+                ) : (
+                  <Feather name="file-text" size={20} color="#357bd2" />
+                )}
+                <Text style={styles.gerarLaudoText}>
+                  {isGeneratingLaudo ? 'Gerando...' : 'Gerar Laudo'}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -515,7 +568,7 @@ export default function DetalhesCaso({ route, navigation }) {
           </TouchableOpacity>
         </View>
         {evidencias.length > 0 ? (
-          evidencias.map(renderEvidenciaCard)
+          evidencias.map((evidencia, index) => renderEvidenciaCard(evidencia, index))
         ) : (
           <Text style={styles.noEvidencias}>Nenhuma evidência registrada</Text>
         )}
@@ -825,6 +878,44 @@ export default function DetalhesCaso({ route, navigation }) {
         </View>
       </Modal>
 
+      {/* Modal de Confirmação de Geração de Laudo */}
+      <Modal
+        visible={showGerarLaudoConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Confirma geração de laudo para Evidência #{selectedEvidenciaIndex}?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowGerarLaudoConfirm(false)}
+                disabled={isGeneratingLaudo}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={() => {
+                  const evidencia = evidencias[parseInt(selectedEvidenciaIndex) - 1];
+                  handleGerarLaudo(evidencia._id);
+                }}
+                disabled={isGeneratingLaudo}
+              >
+                {isGeneratingLaudo ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.popupButtonText}>Confirmar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal de Confirmação de Exclusão de Laudo */}
       <Modal
         visible={showDeleteLaudoConfirm}
@@ -840,6 +931,7 @@ export default function DetalhesCaso({ route, navigation }) {
               <TouchableOpacity
                 style={[styles.popupButton, styles.cancelButton]}
                 onPress={() => setShowDeleteLaudoConfirm(false)}
+                disabled={isDeletingLaudo}
               >
                 <Text style={styles.popupButtonText}>Cancelar</Text>
               </TouchableOpacity>
@@ -847,12 +939,34 @@ export default function DetalhesCaso({ route, navigation }) {
                 style={[styles.popupButton, styles.confirmButton]}
                 onPress={() => {
                   setShowDeleteLaudoConfirm(false);
+                  setShowDeletingLaudoConfirm(true);
                   handleDeleteLaudo(selectedLaudoId);
                 }}
+                disabled={isDeletingLaudo}
               >
-                <Text style={styles.popupButtonText}>Excluir</Text>
+                {isDeletingLaudo ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.popupButtonText}>Excluir</Text>
+                )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Feedback de Exclusão de Laudo */}
+      <Modal
+        visible={showDeletingLaudoConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <ActivityIndicator size="large" color="#357bd2" />
+            <Text style={[styles.popupText, styles.loadingText]}>
+              Excluindo laudo...
+            </Text>
           </View>
         </View>
       </Modal>
@@ -975,6 +1089,12 @@ const styles = StyleSheet.create({
   },
   evidenciaInfo: {
     padding: 15,
+  },
+  evidenciaNumero: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#357bd2',
+    marginBottom: 8,
   },
   evidenciaId: {
     fontSize: 14,
@@ -1252,5 +1372,9 @@ const styles = StyleSheet.create({
   },
   deleteLaudoText: {
     color: '#ff4444',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
   },
 }); 
