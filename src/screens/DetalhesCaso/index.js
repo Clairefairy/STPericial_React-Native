@@ -539,9 +539,13 @@ export default function DetalhesCaso({ route, navigation }) {
         </View>
 
         <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Vítima</Text>
+          <Text style={styles.infoLabel}>Vítimas</Text>
           <Text style={styles.infoValue}>
-            {typeof caso.victim === 'object' ? caso.victim.name : caso.victim || "Sem vítima"}
+            {caso.victim && caso.victim.length > 0 
+              ? caso.victim.map((v, index) => (
+                  `${v.name || 'Vítima sem nome'}${index < caso.victim.length - 1 ? ', ' : ''}`
+                )).join('')
+              : "Sem vítimas"}
           </Text>
         </View>
 
