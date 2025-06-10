@@ -248,8 +248,11 @@ export default function ModalAdicionarEvidencia({ visible, onClose, onSave, caso
         formData.append('case', casoId);
 
         if (evidencia.location) {
-          formData.append('location', JSON.stringify(evidencia.location));
-          formData.append('address', evidencia.address);
+          formData.append('latitude', evidencia.location.latitude.toString());
+          formData.append('longitude', evidencia.location.longitude.toString());
+          if (evidencia.address) {
+            formData.append('address', evidencia.address);
+          }
         }
 
         if (evidencia.fileUrl) {

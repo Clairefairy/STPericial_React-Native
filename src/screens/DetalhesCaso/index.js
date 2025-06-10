@@ -109,32 +109,72 @@ export default function DetalhesCaso({ route, navigation }) {
     }
   };
 
+  const getAddressFromCoordinates = async (latitude, longitude) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'pt-BR',
+            'User-Agent': 'STPericial/1.0'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Erro na resposta da API');
+      }
+
+      const data = await response.json();
+      if (data && data.display_name) {
+        return data.display_name;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao obter endereço:', error);
+      return null;
+    }
+  };
+
   const fetchEvidencias = async () => {
     try {
       setLoading(true);
       const response = await api.get('/api/evidences');
       const evidenciasDoCaso = response.data.filter(evidencia => evidencia.case === caso._id);
       
-      // Buscar informações dos usuários coletores
-      const evidenciasComColetor = await Promise.all(
+      // Buscar informações dos usuários coletores e endereços
+      const evidenciasComDetalhes = await Promise.all(
         evidenciasDoCaso.map(async (evidencia) => {
+          let coletor = evidencia.collectedBy;
+          let endereco = null;
+
+          // Buscar informações do coletor
           if (evidencia.collectedBy) {
             try {
               const userResponse = await api.get(`/api/users/${evidencia.collectedBy}`);
-              return {
-                ...evidencia,
-                collectedBy: userResponse.data
-              };
+              coletor = userResponse.data;
             } catch (err) {
               console.error("Erro ao buscar coletor:", err);
-              return evidencia;
             }
           }
-          return evidencia;
+
+          // Buscar endereço se houver coordenadas
+          if (evidencia.latitude && evidencia.longitude) {
+            endereco = await getAddressFromCoordinates(
+              evidencia.latitude,
+              evidencia.longitude
+            );
+          }
+
+          return {
+            ...evidencia,
+            collectedBy: coletor,
+            address: endereco
+          };
         })
       );
       
-      setEvidencias(evidenciasComColetor);
+      setEvidencias(evidenciasComDetalhes);
       setError(null);
     } catch (err) {
       setError("Erro ao carregar evidências");
@@ -398,6 +438,11 @@ export default function DetalhesCaso({ route, navigation }) {
           <Text style={styles.evidenciaColetor}>
             Coletado por: {evidencia.collectedBy?.name || "Não informado"}
           </Text>
+          {evidencia.address && (
+            <Text style={styles.evidenciaEndereco}>
+              Local: {evidencia.address}
+            </Text>
+          )}
           
           <View style={styles.evidenciaActions}>
             {laudo ? (
@@ -1420,5 +1465,10 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     color: '#666',
+  },
+  evidenciaEndereco: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
   },
 }); 
