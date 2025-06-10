@@ -16,6 +16,8 @@ import { Picker } from '@react-native-picker/picker';
 import ModalVitima from "../../components/ModalVitima";
 import api from '../../services/api';
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 
 export default function AdicionarCaso() {
   const navigation = useNavigation();
@@ -31,6 +33,7 @@ export default function AdicionarCaso() {
   const [identificadoVitima, setIdentificadoVitima] = useState('');
   const [identificacaoVitima, setIdentificacaoVitima] = useState('');
   const [observacoesVitima, setObservacoesVitima] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   // Estados para os campos do formulário
   const [title, setTitle] = useState('');
@@ -39,7 +42,6 @@ export default function AdicionarCaso() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [responsible, setResponsible] = useState('');
   const [victim, setVictim] = useState('');
   const [usuarios, setUsuarios] = useState([]); // lista de responsáveis
   const [vitimas, setVitimas] = useState([]); // lista de vítimas
@@ -99,6 +101,19 @@ export default function AdicionarCaso() {
     }
   };
 
+  // Função para obter o ID do usuário logado
+  const getCurrentUserId = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setCurrentUserId(decoded.id);
+      }
+    } catch (err) {
+      console.error("Erro ao obter ID do usuário:", err);
+    }
+  };
+
   // Função para criar caso
   const handleCreateCase = async () => {
     if (!tipo || !title || !status) {
@@ -126,7 +141,7 @@ export default function AdicionarCaso() {
         numberProcess,
         openingDate: dataAbertura.toISOString(),
         closingDate: dataFechamento ? dataFechamento.toISOString() : undefined,
-        responsible: responsible || undefined,
+        responsible: currentUserId,
         victim: victim || undefined,
       };
 
@@ -143,7 +158,6 @@ export default function AdicionarCaso() {
       setNumberProcess('');
       setDataAbertura(new Date());
       setDataFechamento(null);
-      setResponsible('');
       setVictim('');
       setSearchVictim('');
     } catch (err) {
@@ -213,9 +227,6 @@ export default function AdicionarCaso() {
   // Função para buscar dados
   const fetchData = async () => {
     try {
-      // Busca apenas usuários com perfil de perito
-      const respUsuarios = await api.get("/api/users/");
-      setUsuarios(respUsuarios.data);
       const respVitimas = await api.get("/api/victims/");
       setVitimas(respVitimas.data);
     } catch (err) {
@@ -225,12 +236,14 @@ export default function AdicionarCaso() {
 
   useEffect(() => {
     fetchData();
+    getCurrentUserId();
   }, []);
 
   // Adiciona listener para atualizar dados quando a tela receber foco
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       fetchData();
+      getCurrentUserId();
     });
 
     return unsubscribe;
@@ -338,20 +351,6 @@ export default function AdicionarCaso() {
           onChange={onFechamentoChange}
         />
       )}
-
-      <Text style={styles.label}>Responsável</Text>
-      <View style={styles.inputContainer}>
-        <Picker
-          selectedValue={responsible}
-          onValueChange={setResponsible}
-          style={styles.picker}
-        >
-          <Picker.Item label="Selecione o responsável..." value="" />
-          {usuarios.map((user) => (
-            <Picker.Item key={user._id} label={user.nome || user.email} value={user._id} />
-          ))}
-        </Picker>
-      </View>
 
       <Text style={styles.label}>Vítima</Text>
       <View style={styles.victimSearchContainer}>
