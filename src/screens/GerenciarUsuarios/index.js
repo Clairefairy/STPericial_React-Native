@@ -84,7 +84,10 @@ export default function GerenciarUsuarios() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       <Text style={styles.title}>Gerenciamento de Usuários</Text>
 
       <TouchableOpacity 
@@ -141,7 +144,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 100,
   },
   title: {
     fontSize: 24,
@@ -170,6 +176,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     overflow: "hidden",
+    marginBottom: 20,
   },
   tableHeader: {
     flexDirection: "row",
