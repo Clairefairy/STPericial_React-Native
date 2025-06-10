@@ -147,14 +147,6 @@ export default function Login() {
         >
           <Text style={styles.textButtonLogin}>{loading ? 'Entrando...' : 'Login'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonCadastro}>
-          <Text
-            onPress={() => navigation.navigate("Cadastro")}
-            style={styles.textButtonCadastro}
-          >
-            Não possui uma conta? Cadastre-se
-          </Text>
-        </TouchableOpacity>
       </Animatable.View>
     </View>
   );
@@ -247,16 +239,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
   },
-  // ALTEREI HOJE BOTÃO DE DE CADASTRO
-  textButtonCadastro: {
-    color: "#a1a1a1", // COR CINZA CLARO
-    fontSize: 16, // TAMANHO DA FONTE DO BOTÃO CADASTRO
-    textAlign: "center", // ALINHAMENTO CENTRAL
-    marginTop: 10, // MARGEM SUPERIOR
-    marginBottom: 20, // MARGEM INFERIOR
-    fontWeight: "bold", // NEGRITO
-  },
-
   imageContainer: {
     flex: 0.8,
     justifyContent: "center",
