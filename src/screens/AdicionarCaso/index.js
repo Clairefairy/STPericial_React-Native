@@ -88,10 +88,15 @@ export default function AdicionarCaso() {
     return date.toLocaleDateString('pt-BR');
   };
 
-  const handleSaveVitima = (vitimaData) => {
-    // Aqui você pode implementar a lógica para salvar a vítima
-    console.log('Dados da vítima:', vitimaData);
-    setModalVisible(false);
+  const handleSaveVitima = async (vitimaData) => {
+    try {
+      // Atualiza a lista de vítimas após salvar
+      const respVitimas = await api.get("/api/victims/");
+      setVitimas(respVitimas.data);
+      setModalVisible(false);
+    } catch (err) {
+      console.error("Erro ao atualizar lista de vítimas:", err);
+    }
   };
 
   // Função para criar caso
@@ -205,20 +210,31 @@ export default function AdicionarCaso() {
     </TouchableOpacity>
   );
 
+  // Função para buscar dados
+  const fetchData = async () => {
+    try {
+      // Busca apenas usuários com perfil de perito
+      const respUsuarios = await api.get("/api/users/");
+      setUsuarios(respUsuarios.data);
+      const respVitimas = await api.get("/api/victims/");
+      setVitimas(respVitimas.data);
+    } catch (err) {
+      console.error("Erro ao buscar dados:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Busca apenas usuários com perfil de perito
-        const respUsuarios = await api.get("/api/users/");
-        setUsuarios(respUsuarios.data);
-        const respVitimas = await api.get("/api/victims/");
-        setVitimas(respVitimas.data);
-      } catch (err) {
-        // Pode exibir erro se quiser
-      }
-    };
     fetchData();
   }, []);
+
+  // Adiciona listener para atualizar dados quando a tela receber foco
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const renderFormItem = () => (
     <View style={styles.formContainer}>
