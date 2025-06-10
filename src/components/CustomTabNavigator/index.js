@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AntDesign, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 
 import DrawerRoutes from '../../routes/drawer.routes'; // Importa o Drawer Navigator
 import AdicionarCaso from '../../screens/AdicionarCaso'; // Importa a tela AdicionarCaso
@@ -51,6 +53,26 @@ const CustomHomeButton = ({ children }) => {
 };
 
 export default function CustomTabNavigator() {
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const getUserRole = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const decoded = jwtDecode.jwtDecode(token);
+          setUserRole(decoded.role);
+        }
+      } catch (error) {
+        console.error('Erro ao obter role do usuário:', error);
+      }
+    };
+
+    getUserRole();
+  }, []);
+
+  const canAddCase = userRole === 'admin' || userRole === 'perito';
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -82,19 +104,21 @@ export default function CustomTabNavigator() {
           )
         }}
       />
-      <Tab.Screen
-        name="AdicionarCaso"
-        component={AdicionarCaso}
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ focused }) => (
-            <FontAwesome5 name="plus-square" size={28} color="#fff" />
-          ),
-          tabBarButton: (props) => (
-            <CustomPlusButton {...props} />
-          )
-        }}
-      />
+      {canAddCase && (
+        <Tab.Screen
+          name="AdicionarCaso"
+          component={AdicionarCaso}
+          options={{
+            headerShown: false,
+            tabBarIcon: ({ focused }) => (
+              <FontAwesome5 name="plus-square" size={28} color="#fff" />
+            ),
+            tabBarButton: (props) => (
+              <CustomPlusButton {...props} />
+            )
+          }}
+        />
+      )}
       <Tab.Screen
         name="Favoritos"
         component={Favoritos}

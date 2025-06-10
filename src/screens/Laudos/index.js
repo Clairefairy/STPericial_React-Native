@@ -13,6 +13,8 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useFocusEffect } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 import api from "../../services/api";
 
 export default function Laudos() {
@@ -27,13 +29,31 @@ export default function Laudos() {
   const [sortOrder, setSortOrder] = useState('recent');
   const [selectedResponsible, setSelectedResponsible] = useState('all');
   const [responsibles, setResponsibles] = useState([]);
+  const [userRole, setUserRole] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
       fetchLaudos();
-      fetchResponsibles();
+      getUserRole();
     }, [])
   );
+
+  const getUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setUserRole(decoded.role);
+        if (decoded.role === 'admin') {
+          fetchResponsibles();
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter role do usuário:', error);
+    }
+  };
+
+  const isAdmin = userRole === 'admin';
 
   const fetchResponsibles = async () => {
     try {
@@ -47,8 +67,8 @@ export default function Laudos() {
   const getFilteredAndSortedLaudos = () => {
     let filtered = [...laudos];
 
-    // Filtrar por responsável
-    if (selectedResponsible !== 'all') {
+    // Filtrar por responsável apenas se for admin e tiver um responsável selecionado
+    if (isAdmin && selectedResponsible !== 'all') {
       filtered = filtered.filter(laudo => 
         laudo.expertResponsible?._id === selectedResponsible
       );
@@ -70,10 +90,10 @@ export default function Laudos() {
       const response = await api.get('/api/reports');
       const laudosData = response.data;
 
-      // Buscar detalhes dos responsáveis
+      // Buscar detalhes dos responsáveis apenas se for admin
       const laudosComResponsaveis = await Promise.all(
         laudosData.map(async (laudo) => {
-          if (laudo.expertResponsible) {
+          if (isAdmin && laudo.expertResponsible) {
             try {
               const userResponse = await api.get(`/api/users/${laudo.expertResponsible}`);
               return { ...laudo, expertResponsible: userResponse.data };
@@ -176,11 +196,12 @@ export default function Laudos() {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Gerenciamento de Laudos</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Laudos</Text>
+      </View>
 
-      {/* Filtros */}
       <View style={styles.filtersContainer}>
-        <View style={styles.filterItem}>
+        <View style={styles.filterRow}>
           <Text style={styles.filterLabel}>Ordenar por:</Text>
           <View style={styles.pickerContainer}>
             <Picker
@@ -188,31 +209,33 @@ export default function Laudos() {
               onValueChange={(value) => setSortOrder(value)}
               style={styles.picker}
             >
-              <Picker.Item label="Mais recente" value="recent" />
-              <Picker.Item label="Mais antigo" value="old" />
+              <Picker.Item label="Mais Recentes" value="recent" />
+              <Picker.Item label="Mais Antigos" value="old" />
             </Picker>
           </View>
         </View>
 
-        <View style={styles.filterItem}>
-          <Text style={styles.filterLabel}>Responsável:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedResponsible}
-              onValueChange={(value) => setSelectedResponsible(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Todos" value="all" />
-              {responsibles.map((responsible) => (
-                <Picker.Item 
-                  key={responsible._id} 
-                  label={responsible.name} 
-                  value={responsible._id} 
-                />
-              ))}
-            </Picker>
+        {isAdmin && (
+          <View style={styles.filterRow}>
+            <Text style={styles.filterLabel}>Responsável:</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedResponsible}
+                onValueChange={(value) => setSelectedResponsible(value)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Todos" value="all" />
+                {responsibles.map((responsible) => (
+                  <Picker.Item
+                    key={responsible._id}
+                    label={responsible.name}
+                    value={responsible._id}
+                  />
+                ))}
+              </Picker>
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       {/* Tabela */}
@@ -308,20 +331,22 @@ export default function Laudos() {
                 <Text style={styles.buttonText}>Baixar Laudo</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.deleteButton]}
-                onPress={handleExcluirClick}
-                disabled={loadingDelete}
-              >
-                {loadingDelete ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Icon name="delete" size={16} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.buttonText}>Excluir</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.deleteButton]}
+                  onPress={handleExcluirClick}
+                  disabled={loadingDelete}
+                >
+                  {loadingDelete ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Icon name="delete" size={16} color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={styles.buttonText}>Excluir</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             <TouchableOpacity 
@@ -562,7 +587,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 10,
   },
-  filterItem: {
+  filterRow: {
     flex: 1,
   },
   filterLabel: {
@@ -585,5 +610,8 @@ const styles = StyleSheet.create({
   },
   bottomMargin: {
     height: 120,
+  },
+  header: {
+    marginBottom: 20,
   },
 }); 

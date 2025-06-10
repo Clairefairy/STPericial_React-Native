@@ -12,6 +12,8 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 import ModalVitima from '../../components/ModalVitima';
 import ModalDetalhesVitima from '../../components/ModalDetalhesVitima';
 import api from '../../services/api';
@@ -42,10 +44,26 @@ export default function GerenciarVitimas() {
   const [error, setError] = useState(null);
   const [filtroSexo, setFiltroSexo] = useState('');
   const [filtroEtnia, setFiltroEtnia] = useState('');
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     fetchVitimas();
+    getUserRole();
   }, []);
+
+  const getUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setUserRole(decoded.role);
+      }
+    } catch (error) {
+      console.error('Erro ao obter role do usuário:', error);
+    }
+  };
+
+  const canEdit = userRole === 'admin' || userRole === 'perito';
 
   const fetchVitimas = async () => {
     try {
@@ -152,13 +170,15 @@ export default function GerenciarVitimas() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalCadastroVisible(true)}
-      >
-        <Feather name="user-plus" size={20} color="#fff" />
-        <Text style={styles.addButtonText}>Cadastrar Vítima</Text>
-      </TouchableOpacity>
+      {canEdit && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setModalCadastroVisible(true)}
+        >
+          <Feather name="user-plus" size={20} color="#fff" />
+          <Text style={styles.addButtonText}>Cadastrar Vítima</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.tableContainer}>
         <View style={styles.tableHeader}>

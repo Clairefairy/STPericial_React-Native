@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { View, Image, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 
 import Dashboard from "../screens/Dashboard";
 import Casos from "../screens/Casos";
@@ -21,6 +22,23 @@ const Drawer = createDrawerNavigator();
 
 export default function DrawerRoutes() {
   const navigation = useNavigation();
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const getUserRole = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const decoded = jwtDecode.jwtDecode(token);
+          setUserRole(decoded.role);
+        }
+      } catch (error) {
+        console.error('Erro ao obter role do usuário:', error);
+      }
+    };
+
+    getUserRole();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -118,16 +136,18 @@ export default function DrawerRoutes() {
           ),
         }}
       />
-      <Drawer.Screen
-        name="GerenciarUsuarios"
-        component={GerenciarUsuarios}
-        options={{
-          title: "Gerenciar Usuários",
-          drawerIcon: ({ color }) => (
-            <FontAwesome6 name="users" size={22} color={color} />
-          ),
-        }}
-      />
+      {userRole === 'admin' && (
+        <Drawer.Screen
+          name="GerenciarUsuarios"
+          component={GerenciarUsuarios}
+          options={{
+            title: "Gerenciar Usuários",
+            drawerIcon: ({ color }) => (
+              <FontAwesome6 name="users" size={22} color={color} />
+            ),
+          }}
+        />
+      )}
       <Drawer.Screen
         name="Perfil"
         component={Perfil}

@@ -7,8 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 import api from "../../services/api";
 import ModalEditarRegistroOdontologico from "../ModalEditarRegistroOdontologico";
 
@@ -21,16 +24,35 @@ export default function ModalDetalhesRegistroOdontologico({
   const [loading, setLoading] = useState(false);
   const [victimDetails, setVictimDetails] = useState(null);
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     if (registro?.victim) {
       fetchVictimDetails();
     }
+    getUserRole();
   }, [registro]);
 
   useEffect(() => {
     console.log('Estado do modal de edição:', modalEditarVisible);
   }, [modalEditarVisible]);
+
+  const getUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setUserRole(decoded.role);
+      }
+    } catch (error) {
+      console.error('Erro ao obter role do usuário:', error);
+    }
+  };
+
+  const isAdmin = userRole === 'admin';
+  const canEdit = userRole === 'admin' || userRole === 'perito';
 
   const fetchVictimDetails = async () => {
     try {
@@ -68,6 +90,24 @@ export default function ModalDetalhesRegistroOdontologico({
       console.error('Erro ao atualizar registro:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await api.delete(`/api/dentalRecord/${registro._id}`);
+      setShowDeleteConfirm(false);
+      if (onUpdate) {
+        onUpdate();
+      }
+      onClose();
+      Alert.alert('Sucesso', 'Registro odontológico excluído com sucesso!');
+    } catch (err) {
+      console.error('Erro ao excluir registro:', err);
+      Alert.alert('Erro', 'Não foi possível excluir o registro odontológico.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -148,14 +188,29 @@ export default function ModalDetalhesRegistroOdontologico({
 
             {/* Botões */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.editButton]}
-                onPress={handleEditar}
-                disabled={loading}
-              >
-                <Icon name="edit" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.buttonText}>Editar</Text>
-              </TouchableOpacity>
+              {canEdit && (
+                <TouchableOpacity
+                  style={[styles.button, styles.editButton]}
+                  onPress={handleEditar}
+                  disabled={loading}
+                >
+                  <Icon name="edit" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.buttonText}>Editar</Text>
+                </TouchableOpacity>
+              )}
+
+              {isAdmin && (
+                <TouchableOpacity
+                  style={[styles.button, styles.deleteButton]}
+                  onPress={() => setShowDeleteConfirm(true)}
+                  disabled={loading || isDeleting}
+                >
+                  <Icon name="delete" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.buttonText}>
+                    {isDeleting ? 'Excluindo...' : 'Excluir'}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[styles.button, styles.closeButton]}
@@ -163,6 +218,42 @@ export default function ModalDetalhesRegistroOdontologico({
                 disabled={loading}
               >
                 <Text style={styles.buttonText}>Fechar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmTitle}>Confirmar Exclusão</Text>
+            <Text style={styles.confirmText}>
+              Tem certeza que deseja excluir este registro odontológico? Esta ação não pode ser desfeita.
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.cancelButton]}
+                onPress={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+              >
+                <Text style={styles.confirmButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.confirmDeleteButton]}
+                onPress={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Excluir</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -260,10 +351,56 @@ const styles = StyleSheet.create({
   editButton: {
     backgroundColor: '#357bd2',
   },
+  deleteButton: {
+    backgroundColor: '#ff4444',
+  },
   closeButton: {
     backgroundColor: '#666',
   },
   buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confirmModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ff4444',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  confirmText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  confirmButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#666',
+  },
+  confirmDeleteButton: {
+    backgroundColor: '#ff4444',
+  },
+  confirmButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',

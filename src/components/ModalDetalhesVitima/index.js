@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,38 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 import api from "../../services/api";
 import ModalEditarVitima from "../ModalEditarVitima";
 
 export default function ModalDetalhesVitima({ visible, onClose, vitima, onDelete, onEdit }) {
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const getUserRole = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const decoded = jwtDecode.jwtDecode(token);
+          setUserRole(decoded.role);
+        }
+      } catch (error) {
+        console.error('Erro ao obter role do usuário:', error);
+      }
+    };
+
+    getUserRole();
+  }, []);
+
+  const isAdmin = userRole === 'admin';
+  const canEdit = userRole === 'admin' || userRole === 'perito';
 
   const getSexoLabel = (sexo) => {
     switch (sexo?.toLowerCase()) {
@@ -133,20 +158,32 @@ export default function ModalDetalhesVitima({ visible, onClose, vitima, onDelete
             </ScrollView>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                style={[styles.button, styles.editButton]}
-                onPress={handleEdit}
-              >
-                <Icon name="edit" size={24} color="#fff" />
-                <Text style={styles.buttonText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.button, styles.deleteButton]}
-                onPress={handleDelete}
-              >
-                <Icon name="delete" size={24} color="#fff" />
-                <Text style={styles.buttonText}>Excluir</Text>
-              </TouchableOpacity>
+              {canEdit && (
+                <TouchableOpacity 
+                  style={[styles.button, styles.editButton]}
+                  onPress={handleEdit}
+                >
+                  <Icon name="edit" size={24} color="#fff" />
+                  <Text style={styles.buttonText}>Editar</Text>
+                </TouchableOpacity>
+              )}
+
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={[styles.button, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Icon name="delete" size={24} color="#fff" />
+                  )}
+                  <Text style={styles.buttonText}>
+                    {loading ? 'Excluindo...' : 'Excluir'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>

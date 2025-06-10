@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 import ModalRegistroOdontologico from "../../components/ModalRegistroOdontologico";
 import api from "../../services/api";
 import ModalDetalhesRegistroOdontologico from "../../components/ModalDetalhesRegistroOdontologico";
@@ -25,12 +27,28 @@ export default function RegistrosOdontologicos() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
       fetchRegistros();
+      getUserRole();
     }, [])
   );
+
+  const getUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setUserRole(decoded.role);
+      }
+    } catch (error) {
+      console.error('Erro ao obter role do usuário:', error);
+    }
+  };
+
+  const canCreateRegistro = userRole === 'admin' || userRole === 'perito';
 
   const fetchRegistros = async () => {
     try {
@@ -143,13 +161,15 @@ export default function RegistrosOdontologicos() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Registros Odontológicos</Text>
 
-      <TouchableOpacity 
-        style={styles.createButton}
-        onPress={() => setModalCreateVisible(true)}
-      >
-        <Icon name="add" size={24} color="#fff" style={{ marginRight: 8 }} />
-        <Text style={styles.createButtonText}>Criar Registro</Text>
-      </TouchableOpacity>
+      {canCreateRegistro && (
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => setModalCreateVisible(true)}
+        >
+          <Icon name="add" size={24} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.createButtonText}>Criar Registro</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Tabela */}
       <View style={styles.tableContainer}>

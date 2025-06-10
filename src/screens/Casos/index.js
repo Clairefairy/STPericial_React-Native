@@ -5,7 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Picker } from '@react-native-picker/picker';
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -13,6 +15,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
 
 export default function Casos() {
   const navigation = useNavigation();
@@ -23,15 +27,40 @@ export default function Casos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [responsaveis, setResponsaveis] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [selectedCaso, setSelectedCaso] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [sortOrder, setSortOrder] = useState('recent');
+  const [selectedResponsible, setSelectedResponsible] = useState('all');
+  const [userRole, setUserRole] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchResponsaveis();
       fetchCasos();
+      getUserRole();
     }, [])
   );
 
-  const fetchResponsaveis = async () => {
+  const getUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setUserRole(decoded.role);
+        if (decoded.role === 'admin') {
+          fetchResponsives();
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter role do usuário:', error);
+    }
+  };
+
+  const isAdmin = userRole === 'admin';
+
+  const fetchResponsives = async () => {
     try {
       const response = await api.get('/api/users');
       const usuarios = response.data.filter(user => 
@@ -47,29 +76,29 @@ export default function Casos() {
     try {
       setLoading(true);
       const response = await api.get('/api/cases');
-      let casosData = response.data;
+      const casosData = response.data;
 
-      // Aplicar filtros
-      if (statusFilter !== "Todos") {
-        casosData = casosData.filter(caso => caso.status === statusFilter);
-      }
+      // Buscar detalhes dos responsáveis apenas se for admin
+      const casosComResponsaveis = await Promise.all(
+        casosData.map(async (caso) => {
+          if (isAdmin && caso.responsible) {
+            try {
+              const userResponse = await api.get(`/api/users/${caso.responsible}`);
+              return { ...caso, responsible: userResponse.data };
+            } catch (err) {
+              console.error('Erro ao buscar detalhes do responsável:', err);
+              return caso;
+            }
+          }
+          return caso;
+        })
+      );
 
-      if (responsavelFilter) {
-        casosData = casosData.filter(caso => caso.responsible === responsavelFilter);
-      }
-
-      // Aplicar ordenação
-      casosData.sort((a, b) => {
-        const dateA = new Date(a.openingDate);
-        const dateB = new Date(b.openingDate);
-        return ordenacao === "Mais recentes" ? dateB - dateA : dateA - dateB;
-      });
-
-      setCasos(casosData);
+      setCasos(casosComResponsaveis);
       setError(null);
     } catch (err) {
-      setError("Erro ao carregar os casos. Tente novamente mais tarde.");
-      console.error("Erro ao buscar casos:", err);
+      console.error('Erro ao buscar casos:', err);
+      setError('Erro ao carregar casos');
     } finally {
       setLoading(false);
     }
@@ -152,25 +181,27 @@ export default function Casos() {
           </View>
         </View>
 
-        <View style={styles.filterItem}>
-          <Text style={styles.filterLabel}>Responsável</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={responsavelFilter}
-              onValueChange={(itemValue) => setResponsavelFilter(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Todos" value="" />
-              {responsaveis.map((responsavel) => (
-                <Picker.Item 
-                  key={responsavel._id} 
-                  label={responsavel.name} 
-                  value={responsavel._id} 
-                />
-              ))}
-            </Picker>
+        {isAdmin && (
+          <View style={styles.filterItem}>
+            <Text style={styles.filterLabel}>Responsável</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={responsavelFilter}
+                onValueChange={(itemValue) => setResponsavelFilter(itemValue)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Todos" value="" />
+                {responsaveis.map((responsavel) => (
+                  <Picker.Item 
+                    key={responsavel._id} 
+                    label={responsavel.name} 
+                    value={responsavel._id} 
+                  />
+                ))}
+              </Picker>
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.filterItem}>
           <Text style={styles.filterLabel}>Ordenar por</Text>

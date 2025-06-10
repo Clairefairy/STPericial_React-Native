@@ -61,6 +61,7 @@ export default function DetalhesCaso({ route, navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showMapModal, setShowMapModal] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -68,6 +69,7 @@ export default function DetalhesCaso({ route, navigation }) {
     checkFavorito();
     fetchLaudos();
     getCurrentUserId();
+    getUserRole();
   }, []);
 
   // Adicionar listener para atualizar dados quando a tela receber foco ou novos parâmetros
@@ -91,6 +93,23 @@ export default function DetalhesCaso({ route, navigation }) {
       setCasoDetalhado(route.params.caso);
     }
   }, [route.params?.caso]);
+
+  const getUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode.jwtDecode(token);
+        setUserRole(decoded.role);
+      }
+    } catch (error) {
+      console.error('Erro ao obter role do usuário:', error);
+    }
+  };
+
+  const isAdmin = userRole === 'admin';
+  const isAssistente = userRole === 'assistente';
+  const canGenerateReports = !isAssistente;
+  const canEditCase = userRole === 'admin' || userRole === 'perito';
 
   const fetchCasoDetalhado = async () => {
     try {
@@ -482,42 +501,46 @@ export default function DetalhesCaso({ route, navigation }) {
                   <Feather name="download" size={20} color="#357bd2" />
                   <Text style={styles.gerarLaudoText}>Baixar Laudo</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.gerarLaudoButton, styles.deleteLaudoButton]}
-                  onPress={() => {
-                    setSelectedLaudoId(laudo._id);
-                    setShowDeleteLaudoConfirm(true);
-                  }}
-                  disabled={isDeletingLaudo}
-                >
-                  {isDeletingLaudo ? (
-                    <ActivityIndicator size="small" color="#ff4444" />
-                  ) : (
-                    <Feather name="trash-2" size={20} color="#ff4444" />
-                  )}
-                  <Text style={[styles.gerarLaudoText, styles.deleteLaudoText]}>
-                    {isDeletingLaudo ? 'Excluindo...' : 'Excluir Laudo'}
-                  </Text>
-                </TouchableOpacity>
+                {isAdmin && (
+                  <TouchableOpacity
+                    style={[styles.gerarLaudoButton, styles.deleteLaudoButton]}
+                    onPress={() => {
+                      setSelectedLaudoId(laudo._id);
+                      setShowDeleteLaudoConfirm(true);
+                    }}
+                    disabled={isDeletingLaudo}
+                  >
+                    {isDeletingLaudo ? (
+                      <ActivityIndicator size="small" color="#ff4444" />
+                    ) : (
+                      <Feather name="trash-2" size={20} color="#ff4444" />
+                    )}
+                    <Text style={[styles.gerarLaudoText, styles.deleteLaudoText]}>
+                      {isDeletingLaudo ? 'Excluindo...' : 'Excluir Laudo'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              <TouchableOpacity
-                style={[styles.gerarLaudoButton, isGeneratingLaudo && styles.disabledButton]}
-                onPress={() => {
-                  setSelectedEvidenciaIndex(evidenciaIndex);
-                  setShowGerarLaudoConfirm(true);
-                }}
-                disabled={isGeneratingLaudo}
-              >
-                {isGeneratingLaudo ? (
-                  <ActivityIndicator size="small" color="#357bd2" />
-                ) : (
-                  <Feather name="file-text" size={20} color="#357bd2" />
-                )}
-                <Text style={styles.gerarLaudoText}>
-                  {isGeneratingLaudo ? 'Gerando...' : 'Gerar Laudo'}
-                </Text>
-              </TouchableOpacity>
+              canGenerateReports && (
+                <TouchableOpacity
+                  style={[styles.gerarLaudoButton, isGeneratingLaudo && styles.disabledButton]}
+                  onPress={() => {
+                    setSelectedEvidenciaIndex(evidenciaIndex);
+                    setShowGerarLaudoConfirm(true);
+                  }}
+                  disabled={isGeneratingLaudo}
+                >
+                  {isGeneratingLaudo ? (
+                    <ActivityIndicator size="small" color="#357bd2" />
+                  ) : (
+                    <Feather name="file-text" size={20} color="#357bd2" />
+                  )}
+                  <Text style={styles.gerarLaudoText}>
+                    {isGeneratingLaudo ? 'Gerando...' : 'Gerar Laudo'}
+                  </Text>
+                </TouchableOpacity>
+              )
             )}
 
             <View style={styles.actionButtons}>
@@ -527,15 +550,17 @@ export default function DetalhesCaso({ route, navigation }) {
               >
                 <Feather name="edit-2" size={20} color="#87c05e" />
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.deleteEvidenciaButton]}
-                onPress={() => {
-                  setSelectedEvidencia(evidencia);
-                  setShowDeleteConfirm(true);
-                }}
-              >
-                <Feather name="trash-2" size={20} color="#ff4444" />
-              </TouchableOpacity>
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.deleteEvidenciaButton]}
+                  onPress={() => {
+                    setSelectedEvidencia(evidencia);
+                    setShowDeleteConfirm(true);
+                  }}
+                >
+                  <Feather name="trash-2" size={20} color="#ff4444" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -600,13 +625,15 @@ export default function DetalhesCaso({ route, navigation }) {
           <Text style={styles.status}>{formatStatus(caso.status)}</Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.generatePdfButton}
-          onPress={() => {}}
-        >
-          <Feather name="file-text" size={20} color="#fff" />
-          <Text style={styles.generatePdfButtonText}>Gerar PDF</Text>
-        </TouchableOpacity>
+        {canGenerateReports && (
+          <TouchableOpacity 
+            style={styles.generatePdfButton}
+            onPress={() => {}}
+          >
+            <Feather name="file-text" size={20} color="#fff" />
+            <Text style={styles.generatePdfButtonText}>Gerar PDF</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.infoSection}>
@@ -672,20 +699,24 @@ export default function DetalhesCaso({ route, navigation }) {
 
       <View style={styles.deleteCaseSection}>
         <View style={styles.caseActionButtons}>
-          <TouchableOpacity
-            style={[styles.caseActionButton, styles.editCaseButton]}
-            onPress={() => navigation.navigate('EditarCaso', { caso: casoDetalhado })}
-          >
-            <Feather name="edit-2" size={20} color="#fff" />
-            <Text style={styles.caseActionButtonText}>Editar Caso</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.caseActionButton, styles.deleteCaseButton]}
-            onPress={() => setShowDeleteCaseConfirm(true)}
-          >
-            <Feather name="trash-2" size={20} color="#fff" />
-            <Text style={styles.caseActionButtonText}>Excluir Caso</Text>
-          </TouchableOpacity>
+          {canEditCase && (
+            <TouchableOpacity
+              style={[styles.caseActionButton, styles.editCaseButton]}
+              onPress={() => navigation.navigate('EditarCaso', { caso: casoDetalhado })}
+            >
+              <Feather name="edit-2" size={20} color="#fff" />
+              <Text style={styles.caseActionButtonText}>Editar Caso</Text>
+            </TouchableOpacity>
+          )}
+          {isAdmin && (
+            <TouchableOpacity
+              style={[styles.caseActionButton, styles.deleteCaseButton]}
+              onPress={() => setShowDeleteCaseConfirm(true)}
+            >
+              <Feather name="trash-2" size={20} color="#fff" />
+              <Text style={styles.caseActionButtonText}>Excluir Caso</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
