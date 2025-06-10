@@ -35,8 +35,14 @@ export default function ModalDetalhesRegistroOdontologico({
   const fetchVictimDetails = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/victims/${registro.victim}`);
-      setVictimDetails(response.data);
+      // Primeiro, busca o registro odontológico completo para garantir que temos o ID da vítima
+      const registroResponse = await api.get(`/api/dentalRecord/${registro._id}`);
+      const registroCompleto = registroResponse.data;
+      
+      if (registroCompleto.victim) {
+        const response = await api.get(`/api/victims/${registroCompleto.victim}`);
+        setVictimDetails(response.data);
+      }
     } catch (err) {
       console.error('Erro ao buscar detalhes da vítima:', err);
     } finally {
@@ -85,10 +91,17 @@ export default function ModalDetalhesRegistroOdontologico({
                 <Text style={styles.sectionTitle}>Vítima</Text>
                 {loading ? (
                   <ActivityIndicator size="small" color="#357bd2" />
+                ) : victimDetails ? (
+                  <View>
+                    <Text style={styles.sectionContent}>
+                      Nome: {victimDetails.name || 'Não informado'}
+                    </Text>
+                    <Text style={styles.sectionContent}>
+                      ID: {victimDetails._id || 'Não informado'}
+                    </Text>
+                  </View>
                 ) : (
-                  <Text style={styles.sectionContent}>
-                    {victimDetails?.name || 'Vítima sem nome'}
-                  </Text>
+                  <Text style={styles.noData}>Vítima não encontrada</Text>
                 )}
               </View>
 
