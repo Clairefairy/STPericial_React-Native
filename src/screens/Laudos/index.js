@@ -30,6 +30,9 @@ export default function Laudos() {
   const [selectedResponsible, setSelectedResponsible] = useState('all');
   const [responsibles, setResponsibles] = useState([]);
   const [userRole, setUserRole] = useState(null);
+  const [showSendEmailConfirm, setShowSendEmailConfirm] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showEmailSuccess, setShowEmailSuccess] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -178,6 +181,20 @@ export default function Laudos() {
     setConfirmModalVisible(true);
   };
 
+  const handleSendEmail = async () => {
+    try {
+      setIsSendingEmail(true);
+      await api.post(`/api/reports/sendEmail/${selectedLaudo._id}`);
+      setShowSendEmailConfirm(false);
+      setShowEmailSuccess(true);
+    } catch (err) {
+      console.error("Erro ao enviar e-mail:", err);
+      Alert.alert('Erro', 'Não foi possível enviar o e-mail. Tente novamente.');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -318,39 +335,41 @@ export default function Laudos() {
               </View>
             </ScrollView>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.downloadButton]}
-                onPress={handleDownload}
-              >
-                <FontAwesome5 name="download" size={16} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.buttonText}>Baixar Laudo</Text>
-              </TouchableOpacity>
-
-              {isAdmin && (
+            <View style={styles.modalButtonsContainer}>
+              <View style={styles.modalButtons}>
                 <TouchableOpacity 
-                  style={[styles.modalButton, styles.deleteButton]}
-                  onPress={handleExcluirClick}
-                  disabled={loadingDelete}
+                  style={[styles.modalButton, styles.downloadButton]}
+                  onPress={() => setShowSendEmailConfirm(true)}
                 >
-                  {loadingDelete ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Icon name="delete" size={16} color="#fff" style={{ marginRight: 8 }} />
-                      <Text style={styles.buttonText}>Excluir</Text>
-                    </>
-                  )}
+                  <FontAwesome5 name="envelope" size={16} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.buttonText}>Enviar Laudo</Text>
                 </TouchableOpacity>
-              )}
-            </View>
 
-            <TouchableOpacity 
-              style={[styles.modalButton, styles.closeButton]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.buttonText}>Fechar</Text>
-            </TouchableOpacity>
+                {isAdmin && (
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.deleteButton]}
+                    onPress={handleExcluirClick}
+                    disabled={loadingDelete}
+                  >
+                    {loadingDelete ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Icon name="delete" size={16} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.buttonText}>Excluir</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.closeButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Fechar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -389,6 +408,69 @@ export default function Laudos() {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Envio de E-mail */}
+      <Modal
+        visible={showSendEmailConfirm}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSendEmailConfirm(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmModalTitle}>Enviar Laudo</Text>
+            <Text style={styles.confirmModalText}>
+              Deseja receber o laudo por e-mail?
+            </Text>
+            
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowSendEmailConfirm(false)}
+                disabled={isSendingEmail}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.downloadButton]}
+                onPress={handleSendEmail}
+                disabled={isSendingEmail}
+              >
+                {isSendingEmail ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Enviar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Sucesso do E-mail */}
+      <Modal
+        visible={showEmailSuccess}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEmailSuccess(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <Text style={styles.successModalTitle}>Sucesso!</Text>
+            <Text style={styles.successModalText}>
+              E-mail enviado com sucesso!
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.successButton}
+              onPress={() => setShowEmailSuccess(false)}
+            >
+              <Text style={styles.buttonText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -471,11 +553,14 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '90%',
     maxWidth: 400,
-    maxHeight: '80%',
+    maxHeight: '95%',
     position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
   },
   modalScrollView: {
-    maxHeight: '60%',
+    flexShrink: 1,
+    marginBottom: 10,
   },
   modalTitle: {
     fontSize: 20,
@@ -505,11 +590,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  modalButtonsContainer: {
+    marginTop: 'auto',
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
-    marginTop: 15,
     marginBottom: 10,
   },
   modalButton: {
@@ -604,5 +691,34 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
+  },
+  successModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 300,
+    alignItems: 'center',
+  },
+  successModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  successModalText: {
+    fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  successButton: {
+    backgroundColor: '#357bd2',
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
   },
 }); 
