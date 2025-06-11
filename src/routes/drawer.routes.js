@@ -9,7 +9,6 @@ import * as jwtDecode from 'jwt-decode';
 
 import Dashboard from "../screens/Dashboard";
 import Casos from "../screens/Casos";
-import Relatorios from "../screens/Relatorios";
 import Laudos from "../screens/Laudos";
 import RegistrosOdontologicos from "../screens/RegistrosOdontologicos";
 import GerenciarUsuarios from "../screens/GerenciarUsuarios";
@@ -104,16 +103,6 @@ export default function DrawerRoutes() {
           title: "Casos",
           drawerIcon: ({ color }) => (
             <Icon name="folder" size={22} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="Relatorios"
-        component={Relatorios}
-        options={{
-          title: "Relatórios",
-          drawerIcon: ({ color }) => (
-            <Icon name="assessment" size={22} color={color} />
           ),
         }}
       />
