@@ -65,6 +65,9 @@ export default function DetalhesCaso({ route, navigation }) {
   const [showSendEmailConfirm, setShowSendEmailConfirm] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [showEmailSuccess, setShowEmailSuccess] = useState(false);
+  const [showGeneratePdfConfirm, setShowGeneratePdfConfirm] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showPdfSuccess, setShowPdfSuccess] = useState(false);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -458,6 +461,20 @@ export default function DetalhesCaso({ route, navigation }) {
     }
   };
 
+  const handleGeneratePdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      await api.get(`/api/genRecord/ia/${caso._id}`);
+      setShowGeneratePdfConfirm(false);
+      setShowPdfSuccess(true);
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const renderEvidenciaCard = (evidencia, index) => {
     const laudo = laudos[evidencia._id];
     const evidenciaIndex = String(index + 1).padStart(3, '0');
@@ -645,7 +662,7 @@ export default function DetalhesCaso({ route, navigation }) {
         {canGenerateReports && (
           <TouchableOpacity 
             style={styles.generatePdfButton}
-            onPress={() => {}}
+            onPress={() => setShowGeneratePdfConfirm(true)}
           >
             <Feather name="file-text" size={20} color="#fff" />
             <Text style={styles.generatePdfButtonText}>Gerar PDF</Text>
@@ -1227,6 +1244,62 @@ export default function DetalhesCaso({ route, navigation }) {
             <TouchableOpacity
               style={[styles.popupButton, styles.confirmButton]}
               onPress={() => setShowEmailSuccess(false)}
+            >
+              <Text style={styles.popupButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Geração de PDF */}
+      <Modal
+        visible={showGeneratePdfConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Deseja gerar relatório para o Caso #{caso._id}?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowGeneratePdfConfirm(false)}
+                disabled={isGeneratingPdf}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleGeneratePdf}
+                disabled={isGeneratingPdf}
+              >
+                {isGeneratingPdf ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.popupButtonText}>Gerar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Sucesso do PDF */}
+      <Modal
+        visible={showPdfSuccess}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              PDF gerado com sucesso!
+            </Text>
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={() => setShowPdfSuccess(false)}
             >
               <Text style={styles.popupButtonText}>OK</Text>
             </TouchableOpacity>
