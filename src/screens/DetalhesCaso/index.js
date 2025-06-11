@@ -89,10 +89,10 @@ export default function DetalhesCaso({ route, navigation }) {
     navigation.setOptions({
       headerLeft: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('Casos')}
+          onPress={() => navigation.goBack()}
           style={{ marginLeft: 10 }}
         >
-          <Icon name="arrow-back" size={24} color="#333" />
+          <Icon name="arrow-back" size={24} color="#fff" style={{ marginRight: 30 }} />
         </TouchableOpacity>
       ),
     });
