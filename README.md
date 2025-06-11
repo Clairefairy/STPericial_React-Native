@@ -36,7 +36,7 @@ Este repositório equivale ao Frontend do sistema de Perícias Odontológicas ST
 - Node.js
 - Expo Go
 
-## 🔧 Rodando o Projeto
+## 🔧 Configurando o Projeto
 
 1. Clone o repositório:
 ```bash
