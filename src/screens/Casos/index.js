@@ -218,35 +218,42 @@ export default function Casos() {
         </View>
       </View>
 
-      {/* Tabela */}
-      <View style={styles.tableContainer}>
-        {/* Cabeçalho da tabela */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, styles.titleCell]}>Título</Text>
-          <Text style={styles.headerCell}>Status</Text>
-          <Text style={styles.headerCell}>Abertura</Text>
-          <Text style={styles.headerCell}>Detalhes</Text>
-        </View>
-
-        {/* Linhas da tabela */}
-        {casos.map((caso) => (
-          <View key={caso._id} style={styles.tableRow}>
-            <Text style={[styles.cell, styles.titleCell]}>{caso.title}</Text>
-            <View style={styles.cell}>
-              {getStatusIcon(caso.status)}
+      {/* Cards */}
+      <View style={styles.cardsContainer}>
+        {casos.map((caso, index) => (
+          <TouchableOpacity
+            key={caso._id}
+            style={[
+              styles.card,
+              { backgroundColor: index % 2 === 0 ? '#f5f5f5' : '#e8f0f8' }
+            ]}
+            onPress={() => handleDetalhes(caso)}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{caso.title}</Text>
+              <View style={styles.statusContainer}>
+                {getStatusIcon(caso.status)}
+                <Text style={styles.statusText}>{formatStatus(caso.status)}</Text>
+              </View>
             </View>
-            <Text style={styles.cell}>{formatDate(caso.openingDate)}</Text>
-            <View style={styles.actionsCell}>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleDetalhes(caso)}
-              >
-                <Icon name="assignment" size={24} color="#357bd2" />
-              </TouchableOpacity>
+            <View style={styles.cardInfo}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Data de Abertura:</Text>
+                <Text style={styles.infoValue}>{formatDate(caso.openingDate)}</Text>
+              </View>
+              {caso.responsible && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Responsável:</Text>
+                  <Text style={styles.infoValue}>{caso.responsible.name}</Text>
+                </View>
+              )}
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
+
+      {/* Margem para o Tab Navigator */}
+      <View style={styles.bottomMargin} />
     </ScrollView>
   );
 }
@@ -285,55 +292,60 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
   },
-  tableContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    overflow: "hidden",
-    marginBottom: 150,
+  cardsContainer: {
+    paddingBottom: 40,
   },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#357bd2",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  headerCell: {
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
     flex: 1,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
+    marginRight: 12,
   },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    alignItems: "center",
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  cell: {
-    flex: 1,
-    textAlign: "center",
-    color: "#333",
-    justifyContent: "center",
-    alignItems: "center",
+  statusText: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: '#666',
   },
-  titleCell: {
-    flex: 2,
+  cardInfo: {
+    gap: 8,
   },
-  actionsCell: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  actionButton: {
-    padding: 5,
-    minWidth: 40,
-    alignItems: "center",
+  infoLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 8,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#333',
   },
   centered: {
     justifyContent: 'center',
@@ -343,5 +355,8 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 16,
     textAlign: 'center',
+  },
+  bottomMargin: {
+    height: 100,
   },
 }); 

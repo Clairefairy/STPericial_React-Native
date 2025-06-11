@@ -180,55 +180,43 @@ export default function GerenciarVitimas() {
         </TouchableOpacity>
       )}
 
-      <View style={styles.tableContainer}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, styles.nomeCell]}>Nome</Text>
-          <Text style={styles.headerCell}>Sexo</Text>
-          <Text style={styles.headerCell}>Etnia</Text>
-          <Text style={styles.headerCell}>ID</Text>
-          <Text style={styles.headerCell}>Detalhes</Text>
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#357bd2" />
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchVitimas}>
-              <Text style={styles.retryButtonText}>Tentar Novamente</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.tableBody}>
-            {vitimasFiltradas.map((vitima) => (
-              <View key={vitima._id} style={styles.tableRow}>
-                <Text style={[styles.cell, styles.nomeCell]}>{vitima.name || 'Sem nome'}</Text>
-                <Text style={styles.cell}>{getSexoLabel(vitima.sex)}</Text>
-                <Text style={styles.cell}>{vitima.ethnicity || 'N/A'}</Text>
-                <View style={styles.cell}>
-                  {vitima.identified ? (
-                    <Icon name="check-circle" size={24} color="#87c05e" />
-                  ) : (
-                    <Icon name="cancel" size={24} color="#ff4444" />
-                  )}
-                </View>
-                <View style={styles.actionsCell}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleOpenDetalhes(vitima)}
-                  >
-                    <Icon name="assignment" size={24} color="#357bd2" />
-                  </TouchableOpacity>
-                </View>
+      {/* Cards */}
+      <View style={styles.cardsContainer}>
+        {vitimasFiltradas.map((vitima, index) => (
+          <TouchableOpacity
+            key={vitima._id}
+            style={[
+              styles.card,
+              { backgroundColor: index % 2 === 0 ? '#f5f5f5' : '#e8f0f8' }
+            ]}
+            onPress={() => handleOpenDetalhes(vitima)}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{vitima.name || 'Sem nome'}</Text>
+              <View style={styles.idContainer}>
+                {vitima.identified ? (
+                  <Icon name="check-circle" size={20} color="#87c05e" />
+                ) : (
+                  <Icon name="cancel" size={20} color="#ff4444" />
+                )}
               </View>
-            ))}
-          </View>
-        )}
+            </View>
+            <View style={styles.cardInfo}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Sexo:</Text>
+                <Text style={styles.infoValue}>{getSexoLabel(vitima.sex)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Etnia:</Text>
+                <Text style={styles.infoValue}>{vitima.ethnicity || 'N/A'}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <View style={styles.bottomPadding} />
+      {/* Margem para o Tab Navigator */}
+      <View style={styles.bottomMargin} />
 
       <ModalVitima
         visible={modalCadastroVisible}
@@ -301,80 +289,53 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
   },
-  tableContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    overflow: 'hidden',
+  cardsContainer: {
+    paddingBottom: 20,
   },
-  tableHeader: {
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    backgroundColor: '#357bd2',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  headerCell: {
-    flex: 1,
-    color: '#fff',
+  cardTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  nomeCell: {
-    flex: 2,
-  },
-  tableBody: {
-    minHeight: 200,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    alignItems: 'center',
-  },
-  cell: {
-    flex: 1,
-    textAlign: 'center',
     color: '#333',
-    justifyContent: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  idContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  actionsCell: {
-    flex: 0.5,
+  cardInfo: {
+    gap: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  actionButton: {
-    padding: 5,
+  infoLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 8,
   },
-  loadingContainer: {
-    minHeight: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  infoValue: {
+    fontSize: 14,
+    color: '#333',
   },
-  errorContainer: {
-    minHeight: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: '#ff4444',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  retryButton: {
-    backgroundColor: '#357bd2',
-    padding: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  bottomPadding: {
+  bottomMargin: {
     height: 80,
   },
 }); 

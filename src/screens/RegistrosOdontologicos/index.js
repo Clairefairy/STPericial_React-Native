@@ -171,38 +171,43 @@ export default function RegistrosOdontologicos() {
         </TouchableOpacity>
       )}
 
-      {/* Tabela */}
-      <View style={styles.tableContainer}>
-        {/* Cabeçalho da tabela */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, styles.vitimaCell]}>Vítima</Text>
-          <Text style={[styles.headerCell, styles.notasCell]}>Notas</Text>
-          <Text style={styles.headerCell}>Detalhes</Text>
-        </View>
-
-        {/* Linhas da tabela */}
-        {registros.map((registro) => (
-          <View key={registro._id} style={styles.tableRow}>
-            <Text style={[styles.cell, styles.vitimaCell]}>
-              {registro.victim?.name || 'null'}
-            </Text>
-            <Text style={[styles.cell, styles.notasCell]}>
-              {registro.notes || 'Sem notas'}
-            </Text>
-            <View style={styles.actionsCell}>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleDetalhes(registro)}
-                disabled={loadingDetails}
-              >
-                {loadingDetails && selectedRegistro?._id === registro._id ? (
-                  <ActivityIndicator size="small" color="#357bd2" />
-                ) : (
-                  <Icon name="assignment" size={24} color="#357bd2" />
-                )}
-              </TouchableOpacity>
+      {/* Cards */}
+      <View style={styles.cardsContainer}>
+        {registros.map((registro, index) => (
+          <TouchableOpacity
+            key={registro._id}
+            style={[
+              styles.card,
+              { backgroundColor: index % 2 === 0 ? '#f5f5f5' : '#e8f0f8' }
+            ]}
+            onPress={() => handleDetalhes(registro)}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>
+                {registro.victim?.name || 'Vítima não identificada'}
+              </Text>
             </View>
-          </View>
+            <View style={styles.cardInfo}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Notas:</Text>
+                <Text style={styles.infoValue}>
+                  {registro.notes || 'Sem notas'}
+                </Text>
+              </View>
+              {registro.victim && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>ID:</Text>
+                  <View style={styles.idContainer}>
+                    {registro.victim.identified ? (
+                      <Icon name="check-circle" size={20} color="#87c05e" />
+                    ) : (
+                      <Icon name="cancel" size={20} color="#ff4444" />
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -279,57 +284,47 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "center",
   },
-  tableContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    overflow: "hidden",
+  cardsContainer: {
+    paddingBottom: 20,
   },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#357bd2",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  headerCell: {
+  cardHeader: {
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cardInfo: {
+    gap: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 8,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#333',
     flex: 1,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
   },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    alignItems: "center",
-  },
-  cell: {
-    flex: 1,
-    textAlign: "center",
-    color: "#333",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  vitimaCell: {
-    flex: 1.5,
-  },
-  notasCell: {
-    flex: 2,
-  },
-  actionsCell: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionButton: {
-    padding: 5,
-    minWidth: 40,
-    alignItems: "center",
+  idContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bottomMargin: {
     height: 120,
