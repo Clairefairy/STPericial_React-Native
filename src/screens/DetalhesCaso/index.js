@@ -68,6 +68,14 @@ export default function DetalhesCaso({ route, navigation }) {
   const [showGeneratePdfConfirm, setShowGeneratePdfConfirm] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showPdfSuccess, setShowPdfSuccess] = useState(false);
+  const [showRelatoriosModal, setShowRelatoriosModal] = useState(false);
+  const [relatorios, setRelatorios] = useState([]);
+  const [loadingRelatorios, setLoadingRelatorios] = useState(false);
+  const [showSendRelatorioConfirm, setShowSendRelatorioConfirm] = useState(false);
+  const [showSendRelatorioSuccess, setShowSendRelatorioSuccess] = useState(false);
+  const [selectedRelatorioId, setSelectedRelatorioId] = useState(null);
+  const [selectedRelatorioIndex, setSelectedRelatorioIndex] = useState(null);
+  const [isSendingRelatorio, setIsSendingRelatorio] = useState(false);
 
   useEffect(() => {
     fetchCasoDetalhado();
@@ -475,6 +483,68 @@ export default function DetalhesCaso({ route, navigation }) {
     }
   };
 
+  const fetchRelatorios = async () => {
+    try {
+      setLoadingRelatorios(true);
+      const response = await api.get('/api/genRecord');
+      
+      // Filtrar relatórios do caso atual
+      const relatoriosDoCaso = response.data.filter(relatorio => {
+        const caseId = Array.isArray(relatorio.case) && relatorio.case[0] ? relatorio.case[0]._id : null;
+        return caseId === caso._id;
+      });
+      
+      // Buscar informações dos autores
+      const relatoriosComAutores = await Promise.all(
+        relatoriosDoCaso.map(async (relatorio) => {
+          try {
+            if (relatorio.user && typeof relatorio.user === 'object') {
+              return {
+                ...relatorio,
+                authorName: relatorio.user.name || relatorio.user.email || 'Autor desconhecido'
+              };
+            }
+            
+            const userResponse = await api.get(`/api/users/${relatorio.user}`);
+            return {
+              ...relatorio,
+              authorName: userResponse.data.name || userResponse.data.email || 'Autor desconhecido'
+            };
+          } catch (err) {
+            return {
+              ...relatorio,
+              authorName: 'Autor desconhecido'
+            };
+          }
+        })
+      );
+      
+      setRelatorios(relatoriosComAutores);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível carregar os relatórios.');
+    } finally {
+      setLoadingRelatorios(false);
+    }
+  };
+
+  const handleOpenRelatorios = async () => {
+    await fetchRelatorios();
+    setShowRelatoriosModal(true);
+  };
+
+  const handleSendRelatorio = async () => {
+    try {
+      setIsSendingRelatorio(true);
+      await api.post(`/api/genRecord/sendEmail/${selectedRelatorioId}`);
+      setShowSendRelatorioConfirm(false);
+      setShowSendRelatorioSuccess(true);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível enviar o relatório por e-mail.');
+    } finally {
+      setIsSendingRelatorio(false);
+    }
+  };
+
   const renderEvidenciaCard = (evidencia, index) => {
     const laudo = laudos[evidencia._id];
     const evidenciaIndex = String(index + 1).padStart(3, '0');
@@ -674,6 +744,14 @@ export default function DetalhesCaso({ route, navigation }) {
         <Text style={styles.sectionTitle}>Descrição</Text>
         <Text style={styles.descricao}>{caso.description || "Sem descrição"}</Text>
       </View>
+
+      <TouchableOpacity 
+        style={styles.verRelatoriosButton}
+        onPress={handleOpenRelatorios}
+      >
+        <Feather name="file-text" size={20} color="#fff" />
+        <Text style={styles.verRelatoriosButtonText}>Ver Relatórios</Text>
+      </TouchableOpacity>
 
       <View style={styles.infoGrid}>
         <View style={styles.infoItem}>
@@ -1306,6 +1384,123 @@ export default function DetalhesCaso({ route, navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Relatórios */}
+      <Modal
+        visible={showRelatoriosModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.popupContent, styles.relatoriosModalContent]}>
+            <Text style={styles.modalTitle}>Relatórios do Caso #{caso._id}</Text>
+            {loadingRelatorios ? (
+              <ActivityIndicator size="large" color="#357bd2" />
+            ) : (
+              <ScrollView style={styles.relatoriosList}>
+                {relatorios && relatorios.length > 0 ? (
+                  relatorios.map((relatorio, index) => (
+                    <View key={relatorio._id} style={styles.relatorioItem}>
+                      <Text style={styles.relatorioIndex}>
+                        #{String(index + 1).padStart(3, '0')}
+                      </Text>
+                      <Text style={styles.relatorioTitle} numberOfLines={2}>
+                        {relatorio.title || 'Sem título'}
+                      </Text>
+                      <Text style={styles.relatorioAuthor}>
+                        Autor: {relatorio.user?.name || relatorio.user?.email || 'Autor desconhecido'}
+                      </Text>
+                      <Text style={styles.relatorioData}>
+                        Data: {formatDate(relatorio.creationDate)}
+                      </Text>
+                      <TouchableOpacity 
+                        style={styles.emailButton}
+                        onPress={() => {
+                          setSelectedRelatorioId(relatorio._id);
+                          setSelectedRelatorioIndex(index + 1);
+                          setShowSendRelatorioConfirm(true);
+                        }}
+                      >
+                        <Feather name="mail" size={20} color="#357bd2" />
+                        <Text style={styles.emailButtonText}>Enviar por e-mail</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.noRelatoriosContainer}>
+                    <Text style={styles.noRelatorios}>Nenhum relatório registrado</Text>
+                    <Text style={styles.noRelatoriosSubtext}>
+                      Este caso ainda não possui relatórios gerados.
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={() => setShowRelatoriosModal(false)}
+            >
+              <Text style={styles.popupButtonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmação de Envio de Relatório */}
+      <Modal
+        visible={showSendRelatorioConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Deseja enviar o relatório #{String(selectedRelatorioIndex).padStart(3, '0')} por e-mail?
+            </Text>
+            <View style={styles.popupButtons}>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.cancelButton]}
+                onPress={() => setShowSendRelatorioConfirm(false)}
+                disabled={isSendingRelatorio}
+              >
+                <Text style={styles.popupButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.popupButton, styles.confirmButton]}
+                onPress={handleSendRelatorio}
+                disabled={isSendingRelatorio}
+              >
+                {isSendingRelatorio ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.popupButtonText}>Enviar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Sucesso do Envio de Relatório */}
+      <Modal
+        visible={showSendRelatorioSuccess}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupText}>
+              Relatório enviado com sucesso!
+            </Text>
+            <TouchableOpacity
+              style={[styles.popupButton, styles.confirmButton]}
+              onPress={() => setShowSendRelatorioSuccess(false)}
+            >
+              <Text style={styles.popupButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1777,5 +1972,98 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1,
     padding: 10,
+  },
+  relatoriosModalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+  },
+  relatoriosList: {
+    maxHeight: '70%',
+    marginVertical: 15,
+  },
+  relatorioItem: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    position: 'relative',
+  },
+  relatorioIndex: {
+    fontSize: 14,
+    color: '#357bd2',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  relatorioTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    paddingRight: 40, // Espaço para o botão de e-mail
+  },
+  relatorioAuthor: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  relatorioData: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 30, // Espaço para o botão de e-mail
+  },
+  emailButton: {
+    position: 'absolute',
+    bottom: 15,
+    right: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#357bd2',
+    gap: 8,
+  },
+  emailButtonText: {
+    color: '#357bd2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  verRelatoriosButton: {
+    backgroundColor: '#357bd2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    gap: 8,
+  },
+  verRelatoriosButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  noRelatoriosContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noRelatorios: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  noRelatoriosSubtext: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
   },
 }); 
