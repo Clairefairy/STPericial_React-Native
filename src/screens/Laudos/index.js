@@ -90,19 +90,19 @@ export default function Laudos() {
       const response = await api.get('/api/reports');
       const laudosData = response.data;
 
-      // Buscar detalhes dos responsáveis apenas se for admin
+      // Buscar detalhes dos responsáveis para todos os laudos
       const laudosComResponsaveis = await Promise.all(
         laudosData.map(async (laudo) => {
-          if (isAdmin && laudo.expertResponsible) {
+          if (laudo.expertResponsible) {
             try {
               const userResponse = await api.get(`/api/users/${laudo.expertResponsible}`);
               return { ...laudo, expertResponsible: userResponse.data };
             } catch (err) {
               console.error('Erro ao buscar detalhes do responsável:', err);
-              return laudo;
+              return { ...laudo, expertResponsible: { name: 'Responsável não encontrado' } };
             }
           }
-          return laudo;
+          return { ...laudo, expertResponsible: { name: 'Não atribuído' } };
         })
       );
 
@@ -585,22 +585,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filterLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#357bd2',
     marginBottom: 5,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ddd',
     borderRadius: 8,
-    backgroundColor: '#fff',
-    height: 45,
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
   picker: {
-    height: 45,
-    fontSize: 14,
-    color: '#333',
+    height: 50,
   },
   bottomMargin: {
     height: 120,

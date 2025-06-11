@@ -32,8 +32,6 @@ export default function Casos() {
   const [selectedCaso, setSelectedCaso] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
-  const [sortOrder, setSortOrder] = useState('recent');
-  const [selectedResponsible, setSelectedResponsible] = useState('all');
   const [userRole, setUserRole] = useState(null);
 
   useFocusEffect(
@@ -76,23 +74,30 @@ export default function Casos() {
     try {
       setLoading(true);
       const response = await api.get('/api/cases');
-      const casosData = response.data;
+      let casosData = response.data;
 
-      // Buscar detalhes dos responsáveis apenas se for admin
+      // Buscar detalhes dos responsáveis para todos os casos
       const casosComResponsaveis = await Promise.all(
         casosData.map(async (caso) => {
-          if (isAdmin && caso.responsible) {
+          if (caso.responsible) {
             try {
               const userResponse = await api.get(`/api/users/${caso.responsible}`);
               return { ...caso, responsible: userResponse.data };
             } catch (err) {
               console.error('Erro ao buscar detalhes do responsável:', err);
-              return caso;
+              return { ...caso, responsible: { name: 'Responsável não encontrado' } };
             }
           }
-          return caso;
+          return { ...caso, responsible: { name: 'Não atribuído' } };
         })
       );
+
+      // Ordenar os casos
+      casosComResponsaveis.sort((a, b) => {
+        const dateA = new Date(a.openingDate);
+        const dateB = new Date(b.openingDate);
+        return ordenacao === "Mais recentes" ? dateB - dateA : dateA - dateB;
+      });
 
       setCasos(casosComResponsaveis);
       setError(null);
@@ -104,9 +109,28 @@ export default function Casos() {
     }
   };
 
-  useEffect(() => {
-    fetchCasos();
-  }, [statusFilter, responsavelFilter, ordenacao]);
+  const getFilteredAndSortedCasos = () => {
+    let filtered = [...casos];
+
+    // Aplicar filtro de status
+    if (statusFilter !== "Todos") {
+      filtered = filtered.filter(caso => caso.status === statusFilter);
+    }
+
+    // Aplicar filtro de responsável
+    if (responsavelFilter) {
+      filtered = filtered.filter(caso => caso.responsible?._id === responsavelFilter);
+    }
+
+    // Ordenar os casos
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.openingDate);
+      const dateB = new Date(b.openingDate);
+      return ordenacao === "Mais recentes" ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  };
 
   const formatStatus = (status) => {
     switch (status) {
@@ -220,7 +244,7 @@ export default function Casos() {
 
       {/* Cards */}
       <View style={styles.cardsContainer}>
-        {casos.map((caso, index) => (
+        {getFilteredAndSortedCasos().map((caso, index) => (
           <TouchableOpacity
             key={caso._id}
             style={[
@@ -241,12 +265,10 @@ export default function Casos() {
                 <Text style={styles.infoLabel}>Data de Abertura:</Text>
                 <Text style={styles.infoValue}>{formatDate(caso.openingDate)}</Text>
               </View>
-              {caso.responsible && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Responsável:</Text>
-                  <Text style={styles.infoValue}>{caso.responsible.name}</Text>
-                </View>
-              )}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Responsável:</Text>
+                <Text style={styles.infoValue}>{caso.responsible?.name || 'Não atribuído'}</Text>
+              </View>
             </View>
           </TouchableOpacity>
         ))}
@@ -272,22 +294,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   filtersContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
+    gap: 10,
   },
   filterItem: {
-    marginBottom: 15,
+    flex: 1,
   },
   filterLabel: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
+    color: '#357bd2',
     marginBottom: 5,
-    color: "#333",
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: '#ddd',
     borderRadius: 8,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   picker: {
     height: 50,

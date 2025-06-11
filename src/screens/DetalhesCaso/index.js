@@ -84,6 +84,18 @@ export default function DetalhesCaso({ route, navigation }) {
     fetchLaudos();
     getCurrentUserId();
     getUserRole();
+
+    // Configurar o comportamento do botão voltar
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Casos')}
+          style={{ marginLeft: 10 }}
+        >
+          <Icon name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
+      ),
+    });
   }, []);
 
   // Adicionar listener para atualizar dados quando a tela receber foco ou novos parâmetros
@@ -778,16 +790,6 @@ export default function DetalhesCaso({ route, navigation }) {
                 )).join('')
               : "Sem vítimas"}
           </Text>
-        </View>
-
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Data de Criação</Text>
-          <Text style={styles.infoValue}>{formatDate(caso.createdAt)}</Text>
-        </View>
-
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Última Atualização</Text>
-          <Text style={styles.infoValue}>{formatDate(caso.updatedAt)}</Text>
         </View>
       </View>
 
