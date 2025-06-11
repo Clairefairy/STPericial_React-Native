@@ -154,109 +154,6 @@ const Dashboard = () => {
   const [loadingChart, setLoadingChart] = useState(false);
   const fadeAnim = useState(new Animated.Value(1))[0];
 
-  useEffect(() => {
-    fetchData();
-  }, [startDate, endDate, filtroDataAtivo, agruparPor]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const [casosResponse, vitimasResponse] = await Promise.all([
-        api.get('/api/cases'),
-        api.get('/api/victims')
-      ]);
-
-      const casosFiltrados = casosResponse.data.filter((caso) => {
-        const dataCaso = new Date(caso.createdAt);
-        return !filtroDataAtivo || (dataCaso >= startDate && dataCaso <= endDate);
-      });
-      
-      setCasos(casosFiltrados);
-      setVitimas(vitimasResponse.data);
-    } catch (err) {
-      console.error("Erro ao buscar dados:", err);
-      setError("Erro ao carregar dados do dashboard");
-      Alert.alert('Erro', 'Não foi possível carregar os dados do dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getFaixaEtaria = (idade) => {
-    if (!idade) return null;
-    if (idade <= 1) return "Lactente";
-    if (idade <= 12) return "Criança";
-    if (idade <= 18) return "Adolescente";
-    if (idade <= 30) return "Jovem Adulto";
-    if (idade <= 64) return "Adulto";
-    return "Idoso";
-  };
-
-  const getDadosAgrupados = () => {
-    const dadosAgrupados = {};
-
-    switch (agruparPor) {
-      case "status":
-        casos.forEach((caso) => {
-          if (caso.status) {
-            dadosAgrupados[caso.status] = (dadosAgrupados[caso.status] || 0) + 1;
-          }
-        });
-        return Object.entries(dadosAgrupados).map(([key, value]) => ({
-          name: getLabelStatus(key),
-          value,
-          color: getCorStatus(key),
-          legendFontColor: "#7F7F7F",
-          legendFontSize: 12,
-        }));
-
-      case "sexo":
-        vitimas.forEach((vitima) => {
-          if (vitima.sex) {
-            dadosAgrupados[vitima.sex] = (dadosAgrupados[vitima.sex] || 0) + 1;
-          }
-        });
-        return Object.entries(dadosAgrupados).map(([key, value]) => ({
-          name: getLabelSexo(key),
-          value,
-          color: getCorSexo(key),
-          legendFontColor: "#7F7F7F",
-          legendFontSize: 12,
-        }));
-
-      case "etnia":
-        vitimas.forEach((vitima) => {
-          if (vitima.ethnicity) {
-            dadosAgrupados[vitima.ethnicity] = (dadosAgrupados[vitima.ethnicity] || 0) + 1;
-          }
-        });
-        return Object.entries(dadosAgrupados).map(([key, value]) => ({
-          name: getLabelEtnia(key),
-          value,
-          color: getCorEtnia(key),
-          legendFontColor: "#7F7F7F",
-          legendFontSize: 12,
-        }));
-
-      case "faixa_etaria":
-        vitimas.forEach((vitima) => {
-          const faixa = getFaixaEtaria(vitima.age);
-          if (faixa) {
-            dadosAgrupados[faixa] = (dadosAgrupados[faixa] || 0) + 1;
-          }
-        });
-        return Object.entries(dadosAgrupados).map(([key, value]) => ({
-          name: key,
-          value,
-          color: getCorFaixaEtaria(key),
-          legendFontColor: "#7F7F7F",
-          legendFontSize: 12,
-        }));
-    }
-  };
-
   const getCorStatus = (status) => {
     const cores = {
       arquivado: "#6c5ce7",
@@ -317,6 +214,16 @@ const Dashboard = () => {
     return labels[etnia] || etnia;
   };
 
+  const getFaixaEtaria = (idade) => {
+    if (!idade) return null;
+    if (idade <= 1) return "Lactente";
+    if (idade <= 12) return "Criança";
+    if (idade <= 18) return "Adolescente";
+    if (idade <= 30) return "Jovem Adulto";
+    if (idade <= 64) return "Adulto";
+    return "Idoso";
+  };
+
   const getCorFaixaEtaria = (faixa) => {
     const cores = {
       "Lactente": "#74b9ff",
@@ -329,9 +236,105 @@ const Dashboard = () => {
     return cores[faixa] || "#95a5a6";
   };
 
+  // Carregar dados apenas uma vez ao montar o componente
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [casosResponse, vitimasResponse] = await Promise.all([
+        api.get('/api/cases'),
+        api.get('/api/victims')
+      ]);
+      
+      setCasos(casosResponse.data);
+      setVitimas(vitimasResponse.data);
+    } catch (err) {
+      console.error("Erro ao buscar dados:", err);
+      setError("Erro ao carregar dados do dashboard");
+      Alert.alert('Erro', 'Não foi possível carregar os dados do dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Usar useMemo para calcular os casos filtrados por data
+  const casosFiltrados = useMemo(() => {
+    if (!filtroDataAtivo) return casos;
+    
+    return casos.filter((caso) => {
+      const dataCaso = new Date(caso.createdAt);
+      return dataCaso >= startDate && dataCaso <= endDate;
+    });
+  }, [casos, filtroDataAtivo, startDate, endDate]);
+
+  // Usar useMemo para calcular os dados agrupados
   const dadosAgrupados = useMemo(() => {
-    return getDadosAgrupados();
-  }, [agruparPor, casos, vitimas]);
+    const dadosAgrupados = {};
+
+    switch (agruparPor) {
+      case "status":
+        casosFiltrados.forEach((caso) => {
+          if (caso.status) {
+            dadosAgrupados[caso.status] = (dadosAgrupados[caso.status] || 0) + 1;
+          }
+        });
+        return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: getLabelStatus(key),
+          value,
+          color: getCorStatus(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
+        }));
+
+      case "sexo":
+        vitimas.forEach((vitima) => {
+          if (vitima.sex) {
+            dadosAgrupados[vitima.sex] = (dadosAgrupados[vitima.sex] || 0) + 1;
+          }
+        });
+        return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: getLabelSexo(key),
+          value,
+          color: getCorSexo(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
+        }));
+
+      case "etnia":
+        vitimas.forEach((vitima) => {
+          if (vitima.ethnicity) {
+            dadosAgrupados[vitima.ethnicity] = (dadosAgrupados[vitima.ethnicity] || 0) + 1;
+          }
+        });
+        return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: getLabelEtnia(key),
+          value,
+          color: getCorEtnia(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
+        }));
+
+      case "faixa_etaria":
+        vitimas.forEach((vitima) => {
+          const faixa = getFaixaEtaria(vitima.age);
+          if (faixa) {
+            dadosAgrupados[faixa] = (dadosAgrupados[faixa] || 0) + 1;
+          }
+        });
+        return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: key,
+          value,
+          color: getCorFaixaEtaria(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
+        }));
+    }
+  }, [agruparPor, casosFiltrados, vitimas]);
 
   const handleAgruparPorChange = (value) => {
     setLoadingChart(true);
@@ -528,7 +531,7 @@ const Dashboard = () => {
         <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
           Casos por Mês (Últimos 6 meses)
         </Text>
-        <BarChartComponent casos={casos} />
+        <BarChartComponent casos={casosFiltrados} />
       </View>
     </ScrollView>
   );
