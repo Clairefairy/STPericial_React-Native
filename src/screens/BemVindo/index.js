@@ -45,9 +45,12 @@ export default function Bemvindo() {
         style={styles.containerForm}
       >
         <Text style={styles.title}>
-          Gestão eficiente e segura de laudos periciais
+          Bem-vindo ao STPericial
         </Text>
-        <Text style={styles.text}> Faça o login para acessar</Text>
+        <Text style={styles.subtitle}>
+          Sua plataforma completa para gestão de laudos periciais
+        </Text>
+        <Text style={styles.text}>Entre para acessar o sistema</Text>
         <TouchableOpacity 
           style={styles.button}
           onPress={handleAcessar}
@@ -82,14 +85,25 @@ const styles = StyleSheet.create({
     marginTop: -30, //AJUSTE DE AREA DE TEXTO
   },
   title: {
-    fontSize: 24, //TAMANHO DA FONTE "Gstão eficiente e segura de laudos periciais"
+    fontSize: 28,
     fontWeight: "bold",
     marginTop: 22,
     marginBottom: 12,
     color: "#000",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: "500",
+    marginBottom: 12,
+    color: "#357bd2",
+    textAlign: "center",
   },
   text: {
     color: "#a1a1a1",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
   },
   button: {
     position: "absolute",
