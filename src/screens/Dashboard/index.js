@@ -12,10 +12,9 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
-import { PieChart, BarChart } from "react-native-svg-charts";
+import { PieChart, BarChart } from "react-native-chart-kit";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import api from "../../services/api";
-import { Grid, XAxis, YAxis } from 'react-native-svg-charts';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -40,18 +39,104 @@ const PizzaChart = memo(({ data, loading }) => {
     );
   }
 
+  const chartConfig = {
+    backgroundGradientFrom: "#fff",
+    backgroundGradientTo: "#fff",
+    color: (opacity = 1) => `rgba(34, 128, 176, ${opacity})`,
+    strokeWidth: 2,
+    barPercentage: 0.5,
+    useShadowColorFromDataset: false,
+  };
+
   return (
     <Animated.View style={{ 
-      height: 200,
       transform: [{ scale: scaleAnim }],
     }}>
       <PieChart
-        style={{ height: 200 }}
         data={data}
-        innerRadius={0}
-        padAngle={0}
+        width={screenWidth - 70}
+        height={200}
+        chartConfig={chartConfig}
+        accessor="value"
+        backgroundColor="transparent"
+        paddingLeft="15"
+        absolute
       />
     </Animated.View>
+  );
+});
+
+// Componente do gráfico de barras memoizado
+const BarChartComponent = memo(({ casos }) => {
+  const getDadosUltimosMeses = () => {
+    const hoje = new Date();
+    const meses = [];
+    const dadosPorMes = {};
+
+    // Criar array com os últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const mesAno = data.toLocaleDateString('pt-BR', { month: 'short' });
+      meses.push(mesAno);
+      dadosPorMes[mesAno] = 0;
+    }
+
+    // Contar casos por mês
+    casos.forEach((caso) => {
+      if (caso.openingDate) {
+        const dataCaso = new Date(caso.openingDate);
+        const mesAno = dataCaso.toLocaleDateString('pt-BR', { month: 'short' });
+        if (dadosPorMes[mesAno] !== undefined) {
+          dadosPorMes[mesAno]++;
+        }
+      }
+    });
+
+    return meses.map(mes => ({
+      label: mes,
+      value: dadosPorMes[mes]
+    }));
+  };
+
+  const dadosUltimosMeses = getDadosUltimosMeses();
+  
+  const chartConfig = {
+    backgroundGradientFrom: "#fff",
+    backgroundGradientTo: "#fff",
+    color: (opacity = 1) => `rgba(34, 128, 176, ${opacity})`,
+    strokeWidth: 2,
+    barPercentage: 0.5,
+    useShadowColorFromDataset: false,
+    decimalPlaces: 0,
+    formatYLabel: () => '', // Remove os números do eixo Y
+  };
+
+  const data = {
+    labels: dadosUltimosMeses.map(item => item.label),
+    datasets: [
+      {
+        data: dadosUltimosMeses.map(item => item.value),
+      },
+    ],
+  };
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <BarChart
+        data={data}
+        width={screenWidth - 70}
+        height={220}
+        yAxisLabel=""
+        chartConfig={chartConfig}
+        verticalLabelRotation={45}
+        showValuesOnTopOfBars
+        fromZero
+        style={{
+          marginVertical: 8,
+          borderRadius: 16,
+        }}
+      />
+    </View>
   );
 });
 
@@ -120,10 +205,11 @@ const Dashboard = () => {
           }
         });
         return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: getLabelStatus(key),
           value,
-          svg: { fill: getCorStatus(key) },
-          key,
-          label: getLabelStatus(key),
+          color: getCorStatus(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
         }));
 
       case "sexo":
@@ -133,10 +219,11 @@ const Dashboard = () => {
           }
         });
         return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: getLabelSexo(key),
           value,
-          svg: { fill: getCorSexo(key) },
-          key,
-          label: getLabelSexo(key),
+          color: getCorSexo(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
         }));
 
       case "etnia":
@@ -146,10 +233,11 @@ const Dashboard = () => {
           }
         });
         return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: getLabelEtnia(key),
           value,
-          svg: { fill: getCorEtnia(key) },
-          key,
-          label: getLabelEtnia(key),
+          color: getCorEtnia(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
         }));
 
       case "faixa_etaria":
@@ -160,10 +248,11 @@ const Dashboard = () => {
           }
         });
         return Object.entries(dadosAgrupados).map(([key, value]) => ({
+          name: key,
           value,
-          svg: { fill: getCorFaixaEtaria(key) },
-          key,
-          label: key,
+          color: getCorFaixaEtaria(key),
+          legendFontColor: "#7F7F7F",
+          legendFontSize: 12,
         }));
     }
   };
@@ -238,39 +327,6 @@ const Dashboard = () => {
       "Idoso": "#0984e3",
     };
     return cores[faixa] || "#95a5a6";
-  };
-
-  const getDadosUltimosMeses = () => {
-    const hoje = new Date();
-    const meses = [];
-    const dadosPorMes = {};
-
-    // Criar array com os últimos 6 meses
-    for (let i = 5; i >= 0; i--) {
-      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      const mesAno = data.toLocaleDateString('pt-BR', { month: 'short' });
-      meses.push(mesAno);
-      dadosPorMes[mesAno] = 0;
-    }
-
-    // Contar casos por mês
-    casos.forEach((caso) => {
-      if (caso.openingDate) {
-        const dataCaso = new Date(caso.openingDate);
-        const mesAno = dataCaso.toLocaleDateString('pt-BR', { month: 'short' });
-        if (dadosPorMes[mesAno] !== undefined) {
-          dadosPorMes[mesAno]++;
-        }
-      }
-    });
-
-    // Converter para o formato do gráfico
-    return meses.map(mes => ({
-      value: dadosPorMes[mes],
-      svg: { fill: '#2280b0' },
-      key: mes,
-      label: mes
-    }));
   };
 
   const dadosAgrupados = useMemo(() => {
@@ -454,14 +510,6 @@ const Dashboard = () => {
                          agruparPor === "etnia" ? "Etnia" : "Faixa Etária"}
         </Text>
         <PizzaChart data={dadosAgrupados} loading={loadingChart} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: 10 }}>
-          {dadosAgrupados.map((item) => (
-            <View key={item.key} style={{ flexDirection: "row", alignItems: "center", margin: 5 }}>
-              <View style={{ width: 12, height: 12, backgroundColor: item.svg.fill, marginRight: 5 }} />
-              <Text>{item.label}: {item.value}</Text>
-            </View>
-          ))}
-        </View>
       </View>
 
       {/* Gráfico de barras - Últimos 6 meses */}
@@ -480,53 +528,7 @@ const Dashboard = () => {
         <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
           Casos por Mês (Últimos 6 meses)
         </Text>
-        <View style={{ height: 220, flexDirection: 'row', justifyContent: 'center', paddingLeft: 20 }}>
-          <YAxis
-            data={getDadosUltimosMeses()}
-            yAccessor={({ item }) => item.value}
-            contentInset={{ top: 10, bottom: 10 }}
-            svg={{ fill: 'black', fontSize: 10 }}
-            numberOfTicks={5}
-            formatLabel={(value) => Math.round(value)}
-            style={{ marginRight: 30 }}
-          />
-          <View style={{ width: screenWidth * 0.5 }}>
-            <View style={{ flex: 1 }}>
-              <Grid
-                direction="HORIZONTAL"
-                svg={{ 
-                  stroke: '#9e9e9e', 
-                  strokeWidth: 1,
-                  strokeDasharray: [4, 4]
-                }}
-                belowChart={true}
-              />
-              <BarChart
-                style={{ flex: 1, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                data={getDadosUltimosMeses()}
-                svg={{ fill: '#2280b0' }}
-                contentInset={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                spacing={0.2}
-                gridMin={0}
-                yAccessor={({ item }) => item.value}
-              />
-            </View>
-            <XAxis
-              data={getDadosUltimosMeses()}
-              formatLabel={(value, index) => getDadosUltimosMeses()[index].label}
-              contentInset={{ left: 10, right: 10 }}
-              svg={{ 
-                fill: 'black', 
-                fontSize: 10,
-                rotation: 45,
-                originY: 0,
-                y: 10
-              }}
-              style={{ marginTop: 10, height: 30 }}
-              spacing={0.2}
-            />
-          </View>
-        </View>
+        <BarChartComponent casos={casos} />
       </View>
     </ScrollView>
   );
