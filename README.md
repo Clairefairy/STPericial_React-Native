@@ -12,11 +12,11 @@ Este repositório equivale ao Frontend do sistema de Perícias Odontológicas ST
 ## 🚀 Tecnologias Utilizadas
 
 ### Principais Tecnologias
-<br>[<img src="https://img.shields.io/badge/-React_Native-05122A?style=flat&logo=react">](https://reactnative.dev/) - Framework para desenvolvimento mobile
-<br>[<img src="https://img.shields.io/badge/Expo-000000?logo=Expo&logoColor=white">](https://expo.dev/) - Plataforma para desenvolvimento React Native
-<br>[<img src="https://img.shields.io/badge/React%20Navigation-8A2BE2">](https://reactnavigation.org/) - Navegação entre telas
-<br>[<img src="https://img.shields.io/badge/Axios-5A29E4?logo=axios&logoColor=fff&style=flat">](https://axios-http.com/) - Cliente HTTP
-<br>[<img src="https://img.shields.io/badge/JWT%20Decode-black?style=plastic&logo=JSON%20web%20tokens">](https://github.com/auth0/jwt-decode) - Manipulação de tokens JWT
+- [<img src="https://img.shields.io/badge/React--Native-05122A?style=for-the-badge&logo=react">](https://reactnative.dev/)
+- [<img src="https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo">](https://expo.dev/)
+- [<img src="https://img.shields.io/badge/React%20Navigation-8A2BE2?style=for-the-badge">](https://reactnavigation.org/)
+- [<img src="https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=axios">](https://axios-http.com/)
+- [<img src="https://img.shields.io/badge/JWT%20Decode-000000?style=for-the-badge&logo=JSON%20web%20tokens">](https://github.com/auth0/jwt-decode)
 
 ### UI/UX
 - [React Native Paper](https://callstack.github.io/react-native-paper/) - Biblioteca de componentes Material Design
@@ -50,7 +50,7 @@ npm install
 ```
 
 
-## 🚀 Executando o Projeto
+## ▶️ Executando o Projeto
 
 1. Inicie o projeto:
 ```bash
@@ -67,22 +67,14 @@ npx expo start
 - Gerenciamento de casos periciais
 - Registro de vítimas
 - Upload de documentos e imagens
-- Geolocalização
-- Visualização de mapas
+- Geolocalização de evidências
 - Relatórios e gráficos
 
-## 🤝 Contribuição
+## 👥 Equipe
 
-1. Faça um Fork do projeto
-2. Crie uma Branch para sua Feature (`git checkout -b feature/AmazingFeature`)
-3. Faça o Commit das suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Faça o Push para a Branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença [MIT](LICENSE).
-
-## ✒️ Autores
-
-* **Clara Félix** - *Desenvolvimento* - [Seu GitHub](https://github.com/seu-usuario)
+* **Clara Félix** - *Gestão, Comunicação, Front-End* - [Clairefairy](https://github.com/Clairefairy)
+* **Felipe Pimentel** - *Front-End, Testes* - [fpPrazeres](https://github.com/fpPrazeres)
+* **Rebeca Lyra** - *Design, UX* - [RebecaLyra](https://github.com/RebecaLyra)
+* **Ricardo Tompson** - *Front-End, UX* - [RebecaLyra](https://github.com/RebecaLyra)
+* **TalesMachado** - *Front-End, Design* - [TalesMachadoBandeira](https://github.com/TalesMachadoBandeira)
+* **Walison Brandão** - *Back-End, Testes* - [brandaowalison](https://github.com/brandaowalison)
