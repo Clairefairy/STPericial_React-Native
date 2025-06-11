@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     overflow: "hidden",
-    marginBottom: 100,
+    marginBottom: 150,
   },
   tableHeader: {
     flexDirection: "row",
