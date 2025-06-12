@@ -9,6 +9,8 @@
 
 Este repositório equivale ao Frontend do sistema de Perícias Odontológicas STPericial, aplicativo em React-Native desenvolvido para fazer registros de casos de periciais com evidências, geração de laudos, entre outros. Equivale à segunda entrega do Projeto Integrador do semestre de 2025.1 da Turma TADS033 da Faculdade Senac Recife. O projeto foi feito com base na nossa [aplicação web](https://github.com/Clairefairy/STPericial_FrontEnd).
 
+O backend desse projeto pode ser encontrado aqui: https://github.com/brandaowalison/stpericial-back-end
+
 ## 🚀 Tecnologias Utilizadas
 
 ### Principais Tecnologias
@@ -41,10 +43,14 @@ Este repositório equivale ao Frontend do sistema de Perícias Odontológicas ST
 1. Clone o repositório:
 ```bash
 git clone https://github.com/Clairefairy/STPericial_React-Native/
+```
+
+2. Acesse o diretório:
+```bash
 cd STPericial_React-Native
 ```
 
-2. Instale as dependências:
+3. Instale as dependências:
 ```bash
 npm install
 ```
