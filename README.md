@@ -76,5 +76,5 @@ npx expo start
 * **Felipe Pimentel** - *Front-End, Testes* - [fpPrazeres](https://github.com/fpPrazeres)
 * **Rebeca Lyra** - *Design, UX* - [RebecaLyra](https://github.com/RebecaLyra)
 * **Ricardo Tompson** - *Front-End, UX* - [RebecaLyra](https://github.com/RebecaLyra)
-* **TalesMachado** - *Front-End, Design* - [TalesMachadoBandeira](https://github.com/TalesMachadoBandeira)
+* **Tales Machado** - *Front-End, Design* - [TalesMachadoBandeira](https://github.com/TalesMachadoBandeira)
 * **Walison Brandão** - *Back-End, Testes* - [brandaowalison](https://github.com/brandaowalison)
